@@ -12,6 +12,8 @@ include::{page-version}@external-typedb-driver::partial$http-ts/connection/Drive
 
 include::{page-version}@external-typedb-driver::partial$http-ts/connection/DriverParamsTranslated.adoc[]
 
+include::{page-version}@external-typedb-driver::partial$http-ts/connection/DriverTlsConfig.adoc[]
+
 include::{page-version}@external-typedb-driver::partial$http-ts/connection/TransactionOptions.adoc[]
 
 include::{page-version}@external-typedb-driver::partial$http-ts/connection/TransactionType.adoc[]

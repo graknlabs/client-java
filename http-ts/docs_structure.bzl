@@ -77,6 +77,7 @@ dir_mapping = {
     "DatabasesListResponse.adoc": "response",
     "DriverParamsBasic.adoc": "connection",
     "DriverParamsTranslated.adoc": "connection",
+    "DriverTlsConfig.adoc": "connection",
     "Entity.adoc": "concept",
     "EntityType.adoc": "concept",
     "OkQueryResponse.adoc": "response",

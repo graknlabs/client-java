@@ -12,6 +12,7 @@
 |===
 |Name |Type |Description
 a| `password` a| `string` a| 
+a| `tls` a| `DriverTlsConfig` a| 
 a| `translatedAddresses` a| `TranslatedAddress` a| 
 a| `username` a| `string` a| 
 |===

@@ -98,6 +98,24 @@ if [ "$NODE_COUNT" -gt 1 ]; then
   done
 fi
 
+# Wait for full promotion of each replica
+PROMOTION_MAX_RETRIES=60
+if [ "$NODE_COUNT" -gt 1 ]; then
+  for attempt in $(seq 1 $PROMOTION_MAX_RETRIES); do
+    secondaries=$(./1/typedb admin --socket-path=./1/data/admin.sock --command "servers status" 2>&1 | grep -c secondary || true)
+    if [ "$secondaries" -eq $((NODE_COUNT - 1)) ]; then
+      break
+    fi
+    if [ "$attempt" -eq "$PROMOTION_MAX_RETRIES" ]; then
+      echo "Replicas did not become secondaries after ${PROMOTION_MAX_RETRIES} seconds"
+      ./1/typedb admin --socket-path=./1/data/admin.sock --command "servers status"
+      exit 1
+    fi
+    sleep 1
+  done
+  echo "$((NODE_COUNT - 1)) replicas are secondaries"
+fi
+
 ROOT_CA=$ROOT_CA_PATH
 export ROOT_CA
 export CLUSTER_SERVER_SCRIPT="${CLUSTER_SERVER}"

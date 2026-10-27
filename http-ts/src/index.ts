@@ -18,6 +18,7 @@
  */
 
 import { DriverParams, remoteOrigin, resolveOrigin, allOrigins } from "./params";
+import { createFetch, Fetch } from "./transport";
 import {
     AnalyzeResponse,
     ApiErrorResponse,
@@ -85,9 +86,11 @@ export class TypeDBHttpDriver {
 
     private token?: string;
     private currentOrigin: string;
+    private readonly fetch: Fetch;
 
     constructor(private params: DriverParams) {
         this.currentOrigin = remoteOrigin(params);
+        this.fetch = createFetch(params.tls);
     }
 
     getDatabases(): Promise<ApiResponse<DatabasesListResponse>> {
@@ -268,7 +271,7 @@ export class TypeDBHttpDriver {
         let headers = this.authHeaders(tokenResp.ok.token, options);
         let resp: Response;
         try {
-            resp = await fetch(url, { method, body: bodyString, headers });
+            resp = await this.fetch(url, { method, body: bodyString, headers });
         } catch {
             return null;
         }
@@ -277,7 +280,7 @@ export class TypeDBHttpDriver {
             if ("err" in tokenResp) return tokenErrToResult(tokenResp);
             headers = this.authHeaders(tokenResp.ok.token, options);
             try {
-                resp = await fetch(url, { method, body: bodyString, headers });
+                resp = await this.fetch(url, { method, body: bodyString, headers });
             } catch {
                 return null;
             }
@@ -353,7 +356,7 @@ export class TypeDBHttpDriver {
         const body = { username: this.params.username, password: this.params.password };
         let resp: Response;
         try {
-            resp = await fetch(url, { method: "POST", body: stringifyJson(body), headers: { "Content-Type": "application/json" } });
+            resp = await this.fetch(url, { method: "POST", body: stringifyJson(body), headers: { "Content-Type": "application/json" } });
         } catch {
             return driverError("HDR2", `Cannot connect to server at ${this.currentOrigin}`);
         }

@@ -1,0 +1,19 @@
+[#_DriverTlsConfig]
+[.doc-api-reference-driver]
+=== DriverTlsConfig
+
+`class`
+
+TLS settings for ``https`` addresses. Without them, the driver trusts the certificate authorities that the runtime trusts by default.
+
+[caption=""]
+.Fields
+// tag::properties[]
+[cols=",,"]
+[options="header"]
+|===
+|Name |Type |Description
+a| `rootCA` a| `string` a| The contents of the PEM file with the certificate of the CA that signed the servers' certificates (not the path to it). When set, the driver trusts only this CA. Supported in Node.js only: browsers trust the certificates of their own trust store.
+|===
+// end::properties[]
+
