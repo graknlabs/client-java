@@ -46,16 +46,14 @@ if (answer.answerType === "conceptRows") {
 }
 ```
 
-To connect over TLS to a server whose certificate is signed by a private CA, pass the CA certificate in Node.js:
+To connect over TLS to a server whose certificate is signed by a private CA, pass the CA certificate file in Node.js:
 
 ```ts
-import { readFileSync } from "node:fs";
-
 const driver = new TypeDBHttpDriver({
     username: "admin",
     password: "password",
     addresses: [ "https://typedb.example.com:8000" ],
-    tls: { rootCA: readFileSync("ca.pem", "utf8") },
+    tls: { rootCAPath: "ca.pem" },
 });
 ```
 

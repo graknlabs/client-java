@@ -17,6 +17,7 @@
  * under the License.
  */
 
+import type * as NodeFs from "node:fs/promises";
 import type * as NodeHttps from "node:https";
 import { DriverTlsConfig } from "./params";
 
@@ -25,34 +26,49 @@ export type Fetch = (url: string, init: RequestInit) => Promise<Response>;
 const CONNECT_TIMEOUT_MILLIS = 10_000;
 const IDLE_TIMEOUT_MILLIS = 300_000;
 
+export class TlsConfigError extends Error {}
+
 export function createFetch(tls?: DriverTlsConfig): Fetch {
-    const rootCA = tls?.rootCA;
-    if (rootCA === undefined) return (url, init) => fetch(url, init);
+    const rootCAPath = tls?.rootCAPath;
+    if (rootCAPath === undefined) return (url, init) => fetch(url, init);
     if (!isNodeJs()) {
         throw new Error("A TLS root CA can only be set in Node.js: in browsers, add the CA to the trust store.");
-    }
-    if (!rootCA.includes("-----BEGIN CERTIFICATE-----")) {
-        throw new Error("The TLS root CA must be the contents of a PEM certificate file, not its path.");
     }
     let httpsAgent: Promise<{ https: typeof NodeHttps, agent: NodeHttps.Agent }> | undefined;
     return async (url, init) => {
         if (!url.startsWith("https:")) return fetch(url, init);
-        httpsAgent ??= importNodeHttps().then(https => ({
-            https,
-            agent: new https.Agent({ ca: rootCA, keepAlive: true }),
-        }));
+        httpsAgent ??= createHttpsAgent(rootCAPath).catch((error) => {
+            httpsAgent = undefined;
+            throw error;
+        });
         const { https, agent } = await httpsAgent;
         return requestWithAgent(https, agent, url, init);
     };
+}
+
+async function createHttpsAgent(rootCAPath: string): Promise<{ https: typeof NodeHttps, agent: NodeHttps.Agent }> {
+    const [https, fs] = await Promise.all([
+        importNodeModule<typeof NodeHttps>("node:https"),
+        importNodeModule<typeof NodeFs>("node:fs/promises"),
+    ]);
+    let rootCA: string;
+    try {
+        rootCA = await fs.readFile(rootCAPath, "utf8");
+    } catch (error) {
+        throw new TlsConfigError(`Cannot read the TLS root CA file '${rootCAPath}': ${(error as Error).message}`);
+    }
+    if (!rootCA.includes("-----BEGIN CERTIFICATE-----")) {
+        throw new TlsConfigError(`The TLS root CA file '${rootCAPath}' does not contain a PEM certificate.`);
+    }
+    return { https, agent: new https.Agent({ ca: rootCA, keepAlive: true }) };
 }
 
 function isNodeJs(): boolean {
     return typeof process !== "undefined" && typeof process.versions?.node === "string";
 }
 
-function importNodeHttps(): Promise<typeof NodeHttps> {
-    // A specifier that bundlers cannot resolve statically keeps Node's https module out of browser bundles.
-    const specifier = "node:https";
+function importNodeModule<MODULE>(specifier: string): Promise<MODULE> {
+    // A specifier that bundlers cannot resolve statically keeps Node's modules out of browser bundles.
     return import(/* @vite-ignore */ /* webpackIgnore: true */ specifier);
 }
 

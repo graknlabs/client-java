@@ -18,7 +18,6 @@
  */
 
 import { execSync } from "child_process";
-import * as fs from "fs";
 import { TypeDBHttpDriver, isOkResponse, isApiErrorResponse, Server } from "../../dist/index.cjs";
 
 const ADDRESSES = [
@@ -69,7 +68,7 @@ function createDriver(): TypeDBHttpDriver {
     const rootCAPath = process.env.ROOT_CA;
     if (!rootCAPath) throw new Error("ROOT_CA environment variable must be set");
     return new TypeDBHttpDriver({
-        username: USERNAME, password: PASSWORD, addresses: ADDRESSES, tls: { rootCA: fs.readFileSync(rootCAPath, "utf8") }
+        username: USERNAME, password: PASSWORD, addresses: ADDRESSES, tls: { rootCAPath }
     });
 }
 

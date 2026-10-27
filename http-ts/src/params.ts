@@ -37,11 +37,10 @@ export interface DriverParamsTranslated {
  */
 export interface DriverTlsConfig {
     /**
-     * The contents of the PEM file with the certificate of the CA that signed the servers' certificates (not the
-     * path to it). When set, the driver trusts only this CA. Supported in Node.js only: browsers trust the
-     * certificates of their own trust store.
+     * The path to the PEM file with the certificate of the CA that signed the servers' certificates. When set, the
+     * driver trusts only this CA. Supported in Node.js only: browsers trust the certificates of their own trust store.
      */
-    rootCA?: string;
+    rootCAPath?: string;
 }
 
 export interface TranslatedAddress {

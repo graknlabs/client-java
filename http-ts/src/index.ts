@@ -18,7 +18,7 @@
  */
 
 import { DriverParams, remoteOrigin, resolveOrigin, allOrigins } from "./params";
-import { createFetch, Fetch } from "./transport";
+import { createFetch, Fetch, TlsConfigError } from "./transport";
 import {
     AnalyzeResponse,
     ApiErrorResponse,
@@ -357,7 +357,8 @@ export class TypeDBHttpDriver {
         let resp: Response;
         try {
             resp = await this.fetch(url, { method: "POST", body: stringifyJson(body), headers: { "Content-Type": "application/json" } });
-        } catch {
+        } catch (error) {
+            if (error instanceof TlsConfigError) return driverError("HDR3", error.message);
             return driverError("HDR2", `Cannot connect to server at ${this.currentOrigin}`);
         }
         const json = await this.jsonOrNull(resp);

@@ -20,7 +20,6 @@
 import { After, Before } from "@cucumber/cucumber";
 import { AnalyzeResponse, GivenRows, isOkResponse, QueryOptions, QueryResponse, TransactionOptions, TransactionType, TypeDBHttpDriver } from "../../../dist/index.cjs";
 import { assertNotError } from "./params";
-import * as fs from "fs";
 
 export let driver: TypeDBHttpDriver;
 let transactionID: string;
@@ -115,12 +114,12 @@ export const CLUSTER_ADDRESSES = [
     "https://127.0.0.1:28000",
     "https://127.0.0.1:38000"
 ];
-const TLS = isClusterMode ? { rootCA: readRootCA() } : undefined;
+const TLS = isClusterMode ? { rootCAPath: rootCAPath() } : undefined;
 
-function readRootCA(): string {
-    const rootCAPath = process.env.ROOT_CA;
-    if (!rootCAPath) throw new Error("ROOT_CA environment variable must be set");
-    return fs.readFileSync(rootCAPath, "utf8");
+function rootCAPath(): string {
+    const path = process.env.ROOT_CA;
+    if (!path) throw new Error("ROOT_CA environment variable must be set");
+    return path;
 }
 
 export async function openAndTestConnection(username: string, password: string) {
