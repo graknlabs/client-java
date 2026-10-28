@@ -73,6 +73,12 @@ function tokenErrToResult(tokenResp: ApiErrorResponse): ApiErrorResponse | null 
     return TRANSIENT_SIGNIN_ERROR_CODES.has(tokenResp.err.code) ? null : tokenResp;
 }
 
+function errorMessage(error: unknown): string {
+    const reason = (error as { cause?: unknown })?.cause ?? error;
+    const { message, code } = (reason ?? {}) as { message?: string, code?: string };
+    return (message || code || String(reason)).trim();
+}
+
 export * from "./analyze";
 export * from "./concept";
 export { parseJson, stringifyJson } from "./json";
@@ -86,6 +92,7 @@ export class TypeDBHttpDriver {
 
     private token?: string;
     private currentOrigin: string;
+    private lastConnectionError?: string;
     private readonly fetch: Fetch;
 
     constructor(private params: DriverParams) {
@@ -235,6 +242,7 @@ export class TypeDBHttpDriver {
     }
 
     private async apiReqOnce<BODY>(method: string, path: string, body?: BODY, options?: { headers?: Record<string, string> }): Promise<ApiErrorResponse | Response> {
+        this.lastConnectionError = undefined;
         const triedOrigins = new Set([this.currentOrigin]);
         const initial = await this.tryApiReq(method, path, body, options);
         if (isApiErrResp(initial)) return initial;
@@ -260,7 +268,9 @@ export class TypeDBHttpDriver {
                 this.switchOrigin(startOrigin);
             }
         }
-        return result ?? driverError("HDR1", "Cannot connect to any server");
+        if (result !== null) return result;
+        const reason = this.lastConnectionError ? ` (last error: ${this.lastConnectionError})` : "";
+        return driverError("HDR1", `Cannot connect to any server${reason}`);
     }
 
     private async tryApiReq<BODY>(method: string, path: string, body?: BODY, options?: { headers?: Record<string, string> }): Promise<TryResult> {
@@ -272,7 +282,8 @@ export class TypeDBHttpDriver {
         let resp: Response;
         try {
             resp = await this.fetch(url, { method, body: bodyString, headers });
-        } catch {
+        } catch (error) {
+            this.connectionFailed(error);
             return null;
         }
         if (resp.status === HTTP_UNAUTHORIZED) {
@@ -281,7 +292,8 @@ export class TypeDBHttpDriver {
             headers = this.authHeaders(tokenResp.ok.token, options);
             try {
                 resp = await this.fetch(url, { method, body: bodyString, headers });
-            } catch {
+            } catch (error) {
+                this.connectionFailed(error);
                 return null;
             }
         }
@@ -331,6 +343,11 @@ export class TypeDBHttpDriver {
         return lastError;
     }
 
+    private connectionFailed(error: unknown): string {
+        this.lastConnectionError = `Cannot connect to server at ${this.currentOrigin}: ${errorMessage(error)}`;
+        return this.lastConnectionError;
+    }
+
     private switchOrigin(origin: string): void {
         this.currentOrigin = origin;
         this.token = undefined;
@@ -359,7 +376,7 @@ export class TypeDBHttpDriver {
             resp = await this.fetch(url, { method: "POST", body: stringifyJson(body), headers: { "Content-Type": "application/json" } });
         } catch (error) {
             if (error instanceof TlsConfigError) return driverError("HDR3", error.message);
-            return driverError("HDR2", `Cannot connect to server at ${this.currentOrigin}`);
+            return driverError("HDR2", this.connectionFailed(error));
         }
         const json = await this.jsonOrNull(resp);
         if (resp.ok && typeof json?.token === "string") {

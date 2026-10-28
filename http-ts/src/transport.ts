@@ -39,11 +39,6 @@ export class TlsConfigError extends Error {}
 export function createFetch(tls?: DriverTlsConfig): Fetch {
     const rootCAPath = tls?.rootCAPath;
     if (rootCAPath === undefined) return (url, init) => fetch(url, init);
-    if (!isNodeJs()) {
-        throw new TlsConfigError(
-            "A TLS root CA can only be set in Node.js: in browsers, add the CA to the trust store.",
-        );
-    }
     let httpsClient: Promise<HttpsClient> | undefined;
     return async (url, init) => {
         if (!url.startsWith("https:")) return fetch(url, init);
@@ -57,6 +52,9 @@ export function createFetch(tls?: DriverTlsConfig): Fetch {
 }
 
 async function createHttpsClient(rootCAPath: string): Promise<HttpsClient> {
+    if (!isNodeJs()) {
+        throw new TlsConfigError("A TLS root CA can only be set in Node.js: in browsers, add the CA to the trust store.");
+    }
     let https: typeof NodeHttps;
     let fs: typeof NodeFs;
     try {
@@ -109,6 +107,7 @@ function requestWithAgent(
         });
         request.on("error", reject);
         request.on("socket", (socket) => {
+            // A socket reused from the agent's pool is already connected and needs no connect timeout.
             if (!socket.connecting) return;
             const connectTimeout = setTimeout(
                 () => request.destroy(new Error("Connection timed out")), CONNECT_TIMEOUT_MILLIS,

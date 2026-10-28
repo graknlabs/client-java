@@ -98,16 +98,17 @@ if [ "$NODE_COUNT" -gt 1 ]; then
   done
 fi
 
-# Wait for full promotion of each replica
-PROMOTION_MAX_RETRIES=60
+# Wait for each replica to become a secondary
+SECONDARY_MAX_RETRIES=60
 if [ "$NODE_COUNT" -gt 1 ]; then
-  for attempt in $(seq 1 $PROMOTION_MAX_RETRIES); do
-    secondaries=$(./1/typedb admin --socket-path=./1/data/admin.sock --command "servers status" 2>&1 | grep -c secondary || true)
-    if [ "$secondaries" -eq $((NODE_COUNT - 1)) ]; then
+  for attempt in $(seq 1 $SECONDARY_MAX_RETRIES); do
+    voters=$(./1/typedb admin --socket-path=./1/data/admin.sock --command "servers status" 2>&1 |
+      awk -F'|' '{ gsub(/ /, "", $3) } $3 == "primary" || $3 == "secondary" { n++ } END { print n + 0 }')
+    if [ "$voters" -eq "$NODE_COUNT" ]; then
       break
     fi
-    if [ "$attempt" -eq "$PROMOTION_MAX_RETRIES" ]; then
-      echo "Replicas did not become secondaries after ${PROMOTION_MAX_RETRIES} seconds"
+    if [ "$attempt" -eq "$SECONDARY_MAX_RETRIES" ]; then
+      echo "Replicas did not become secondaries after ${SECONDARY_MAX_RETRIES} seconds"
       ./1/typedb admin --socket-path=./1/data/admin.sock --command "servers status"
       exit 1
     fi
