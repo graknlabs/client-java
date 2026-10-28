@@ -21,7 +21,15 @@ import type * as NodeFs from "node:fs/promises";
 import type * as NodeHttps from "node:https";
 import { DriverTlsConfig } from "./params";
 
-export type Fetch = (url: string, init: RequestInit) => Promise<Response>;
+export interface FetchInit {
+    method: string;
+    body?: string;
+    headers: Record<string, string>;
+}
+
+export type Fetch = (url: string, init: FetchInit) => Promise<Response>;
+
+type HttpsClient = { https: typeof NodeHttps, agent: NodeHttps.Agent };
 
 const CONNECT_TIMEOUT_MILLIS = 10_000;
 const IDLE_TIMEOUT_MILLIS = 300_000;
@@ -32,25 +40,33 @@ export function createFetch(tls?: DriverTlsConfig): Fetch {
     const rootCAPath = tls?.rootCAPath;
     if (rootCAPath === undefined) return (url, init) => fetch(url, init);
     if (!isNodeJs()) {
-        throw new Error("A TLS root CA can only be set in Node.js: in browsers, add the CA to the trust store.");
+        throw new TlsConfigError(
+            "A TLS root CA can only be set in Node.js: in browsers, add the CA to the trust store.",
+        );
     }
-    let httpsAgent: Promise<{ https: typeof NodeHttps, agent: NodeHttps.Agent }> | undefined;
+    let httpsClient: Promise<HttpsClient> | undefined;
     return async (url, init) => {
         if (!url.startsWith("https:")) return fetch(url, init);
-        httpsAgent ??= createHttpsAgent(rootCAPath).catch((error) => {
-            httpsAgent = undefined;
+        httpsClient ??= createHttpsClient(rootCAPath).catch((error) => {
+            httpsClient = undefined;
             throw error;
         });
-        const { https, agent } = await httpsAgent;
+        const { https, agent } = await httpsClient;
         return requestWithAgent(https, agent, url, init);
     };
 }
 
-async function createHttpsAgent(rootCAPath: string): Promise<{ https: typeof NodeHttps, agent: NodeHttps.Agent }> {
-    const [https, fs] = await Promise.all([
-        importNodeModule<typeof NodeHttps>("node:https"),
-        importNodeModule<typeof NodeFs>("node:fs/promises"),
-    ]);
+async function createHttpsClient(rootCAPath: string): Promise<HttpsClient> {
+    let https: typeof NodeHttps;
+    let fs: typeof NodeFs;
+    try {
+        [https, fs] = await Promise.all([
+            importNodeModule<typeof NodeHttps>("node:https"),
+            importNodeModule<typeof NodeFs>("node:fs/promises"),
+        ]);
+    } catch (error) {
+        throw new TlsConfigError(`Cannot load the Node.js modules for TLS: ${(error as Error).message}`);
+    }
     let rootCA: string;
     try {
         rootCA = await fs.readFile(rootCAPath, "utf8");
@@ -73,10 +89,10 @@ function importNodeModule<MODULE>(specifier: string): Promise<MODULE> {
 }
 
 function requestWithAgent(
-    https: typeof NodeHttps, agent: NodeHttps.Agent, url: string, init: RequestInit,
+    https: typeof NodeHttps, agent: NodeHttps.Agent, url: string, init: FetchInit,
 ): Promise<Response> {
     return new Promise((resolve, reject) => {
-        const options = { method: init.method, headers: init.headers as Record<string, string>, agent };
+        const options = { method: init.method, headers: init.headers, agent };
         const request = https.request(url, options, (response) => {
             const chunks: Uint8Array[] = [];
             response.on("data", (chunk: Uint8Array) => chunks.push(chunk));
@@ -101,6 +117,6 @@ function requestWithAgent(
             socket.once("close", () => clearTimeout(connectTimeout));
         });
         request.setTimeout(IDLE_TIMEOUT_MILLIS, () => request.destroy(new Error("Request timed out")));
-        request.end(typeof init.body === "string" ? init.body : undefined);
+        request.end(init.body);
     });
 }
