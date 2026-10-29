@@ -55,8 +55,8 @@ const PRIMARY_SELECTION_WAIT_MS = 2000;
 
 // Result of attempting a single request against a single origin.
 //   Response          - reached the server and got an HTTP response
-//   ApiErrorResponse  - reached the server but signin returned an error (e.g. 401);
-//                       distinct from a Response so callers don't retry on other origins
+//   ApiErrorResponse  - an error that every origin would give, e.g. signin rejected (401) or an invalid TLS
+//                       configuration (HDR3); distinct from a Response so callers don't retry on other origins
 //   OriginFailure     - could not use the server (e.g. a connection failure), and why
 type OriginFailure = { failure: string };
 type TryResult = Response | ApiErrorResponse | OriginFailure;
