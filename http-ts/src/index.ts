@@ -42,12 +42,11 @@ const HTTP_MISDIRECTED = 421;
 
 // Codes that mean "this origin is not currently usable for signin" — treated like a
 // connection failure so the caller falls back to another origin instead of waiting:
-//   HDR2  - local driver error: could not reach the server
 //   SRV14 - server returned "Not yet initialised". Happens on a freshly restarted secondary
 //           that has not yet loaded the system DB, or briefly on a node mid-promotion. Either
 //           way another origin is likely healthy, so fall back rather than retry in place.
 //   CSV8/CSV9 - node is not the primary; another origin may be, so fall back.
-const TRANSIENT_SIGNIN_ERROR_CODES = new Set(["HDR2", "SRV14", "CSV8", "CSV9"]);
+const TRANSIENT_SIGNIN_ERROR_CODES = new Set(["SRV14", "CSV8", "CSV9"]);
 
 // A misdirected (421) result that survived redirect-following and origin fallback means
 // no reachable server is primary right now (typically mid-election); wait and retry.
@@ -61,13 +60,14 @@ const PRIMARY_SELECTION_WAIT_MS = 2000;
 //   Unreachable       - could not use the server (e.g. a connection failure), and why
 type Unreachable = { unreachable: string };
 type TryResult = Response | ApiErrorResponse | Unreachable;
+type SignInResult = ApiResponse<SignInResponse> | Unreachable;
 
-function isApiErrResp(value: TryResult | null): value is ApiErrorResponse {
-    return value !== null && "err" in value;
+function isApiErrResp(value: TryResult | SignInResult): value is ApiErrorResponse {
+    return "err" in value;
 }
 
-function isUnreachable(value: TryResult | null): value is Unreachable {
-    return value !== null && "unreachable" in value;
+function isUnreachable(value: TryResult | SignInResult): value is Unreachable {
+    return "unreachable" in value;
 }
 
 // Surface transient signin errors as Unreachable so tryApiReq's caller falls back to other origins.
@@ -77,7 +77,7 @@ function isUnreachable(value: TryResult | null): value is Unreachable {
 function tokenErrToResult(tokenResp: ApiErrorResponse, origin: string): ApiErrorResponse | Unreachable {
     const { code, message } = tokenResp.err;
     if (!TRANSIENT_SIGNIN_ERROR_CODES.has(code)) return tokenResp;
-    return { unreachable: code === "HDR2" ? message : `Server at ${origin} failed signin with [${code}] ${message}` };
+    return { unreachable: `Server at ${origin} failed signin with [${code}] ${message}` };
 }
 
 function errorMessage(error: unknown): string {
@@ -260,11 +260,14 @@ export class TypeDBHttpDriver {
         if (isUnreachable(result) || !result.ok) {
             const startOrigin = this.currentOrigin;
             triedOrigins.add(startOrigin);
-            const fallback = await this.tryFallbackOrigins(method, path, body, options, triedOrigins);
+            const startUnreachable = isUnreachable(result)
+                ? result
+                : { unreachable: `Server at ${startOrigin} returned HTTP ${result.status}` };
+            const fallback = await this.tryFallbackOrigins(method, path, body, options, triedOrigins, startUnreachable);
             if (isApiErrResp(fallback)) return fallback;
-            if (fallback !== null && (isUnreachable(result) || (!isUnreachable(fallback) && fallback.ok))) {
+            if (isUnreachable(result) || (!isUnreachable(fallback) && fallback.ok)) {
                 result = fallback;
-            } else if (!isUnreachable(result)) {
+            } else {
                 // We're returning result from startOrigin, not a fallback. tryFallbackOrigins may
                 // have shifted currentOrigin while iterating; restore so the next request goes
                 // back to the same server that produced this response. Skipped when result is
@@ -282,13 +285,15 @@ export class TypeDBHttpDriver {
     private async tryApiReq<BODY>(method: string, path: string, body?: BODY, options?: { headers?: Record<string, string> }): Promise<TryResult> {
         const origin = this.currentOrigin;
         let tokenResp = await this.getToken();
-        if ("err" in tokenResp) return tokenErrToResult(tokenResp, origin);
+        if (isUnreachable(tokenResp)) return tokenResp;
+        if (isApiErrResp(tokenResp)) return tokenErrToResult(tokenResp, origin);
         const bodyString = body !== undefined ? stringifyJson(body) : undefined;
         let headers = this.authHeaders(tokenResp.ok.token, options);
         let resp = await this.fetchFrom(origin, path, { method, body: bodyString, headers });
         if (!isApiErrResp(resp) && !isUnreachable(resp) && resp.status === HTTP_UNAUTHORIZED) {
             tokenResp = await this.refreshToken();
-            if ("err" in tokenResp) return tokenErrToResult(tokenResp, origin);
+            if (isUnreachable(tokenResp)) return tokenResp;
+            if (isApiErrResp(tokenResp)) return tokenErrToResult(tokenResp, origin);
             headers = this.authHeaders(tokenResp.ok.token, options);
             resp = await this.fetchFrom(origin, path, { method, body: bodyString, headers });
         }
@@ -326,11 +331,12 @@ export class TypeDBHttpDriver {
         return true;
     }
 
-    // Returns null if there was no other origin to try
-    private async tryFallbackOrigins<BODY>(method: string, path: string, body: BODY | undefined, options: { headers?: Record<string, string> } | undefined, triedOrigins: Set<string>): Promise<TryResult | null> {
+    // Returns the first ok response, else the last other response, else the last reason a server was unreachable,
+    // which is startUnreachable if no other origin is reachable
+    private async tryFallbackOrigins<BODY>(method: string, path: string, body: BODY | undefined, options: { headers?: Record<string, string> } | undefined, triedOrigins: Set<string>, startUnreachable: Unreachable): Promise<TryResult> {
         const origins = allOrigins(this.params);
         let lastError: Response | null = null;
-        let lastUnreachable: Unreachable | null = null;
+        let lastUnreachable = startUnreachable;
         for (const origin of origins) {
             if (triedOrigins.has(origin)) continue;
             this.switchOrigin(origin);
@@ -365,29 +371,28 @@ export class TypeDBHttpDriver {
         return { "Authorization": `Bearer ${token}`, "Content-Type": "application/json", ...options?.headers };
     }
 
-    private getToken(): Promise<ApiResponse<SignInResponse>> {
+    private getToken(): Promise<SignInResult> {
         if (this.token) {
-            const resp: ApiResponse<SignInResponse> = { ok: { token: this.token } };
+            const resp: SignInResult = { ok: { token: this.token } };
             return Promise.resolve(resp);
         } else return this.refreshToken();
     }
 
-    private async refreshToken(): Promise<ApiResponse<SignInResponse>> {
+    private async refreshToken(): Promise<SignInResult> {
         return this.signinOnce();
     }
 
-    private async signinOnce(): Promise<ApiResponse<SignInResponse>> {
+    private async signinOnce(): Promise<SignInResult> {
         const body = { username: this.params.username, password: this.params.password };
         const resp = await this.fetchFrom(this.currentOrigin, "/v1/signin", { method: "POST", body: stringifyJson(body), headers: { "Content-Type": "application/json" } });
-        if (isApiErrResp(resp)) return resp;
-        if (isUnreachable(resp)) return driverError("HDR2", resp.unreachable);
+        if (isApiErrResp(resp) || isUnreachable(resp)) return resp;
         const json = await this.jsonOrNull(resp);
         if (resp.ok && typeof json?.token === "string") {
             this.token = json.token;
             return { ok: json };
         }
         if (isApiError(json)) return { err: json, status: resp.status };
-        return driverError("HDR2", `Unexpected signin response from ${this.currentOrigin} (HTTP ${resp.status})`);
+        return { unreachable: `Unexpected signin response from ${this.currentOrigin} (HTTP ${resp.status})` };
     }
 
     private async jsonOrNull(resp: Response): Promise<any> {

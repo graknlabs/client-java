@@ -33,8 +33,8 @@ export type Fetch = (url: string, init: FetchInit) => Promise<Response>;
 type HttpsClient = { https: typeof NodeHttps, agent: NodeHttps.Agent };
 
 const CONNECT_TIMEOUT_MILLIS = 10_000;
-const IDLE_TIMEOUT_MILLIS = 300_000;
-const IDLE_SOCKET_TIMEOUT_MILLIS = 5_000;
+const REQUEST_INACTIVITY_TIMEOUT_MILLIS = 300_000;
+const KEEP_ALIVE_SOCKET_TIMEOUT_MILLIS = 5_000;
 const PEM_CERTIFICATE_REGEX = /-----BEGIN (TRUSTED )?CERTIFICATE-----[\s\S]*?-----END \1CERTIFICATE-----/g;
 
 export class TlsConfigError extends Error {}
@@ -43,12 +43,14 @@ export function createFetch(tls: DriverTlsConfig | undefined, origins: string[])
     const rootCAPath = tls?.rootCAPath;
     if (rootCAPath === undefined) return (url, init) => fetch(url, init);
     const plainOrigin = origins.find((origin) => !isHttps(origin));
+    const plainOriginError = plainOrigin === undefined ? undefined : plainHttpError(plainOrigin);
     let httpsClient: Promise<HttpsClient> | undefined;
     return async (url, init) => {
-        if (plainOrigin !== undefined) {
-            throw new TlsConfigError(`A TLS root CA is set, but ${plainOrigin} does not use https.`);
+        if (plainOriginError !== undefined) throw plainOriginError;
+        if (!isHttps(url)) {
+            const { protocol, host } = new URL(url);
+            throw plainHttpError(`${protocol}//${host}`);
         }
-        if (!isHttps(url)) throw new Error("The server does not use https, but a TLS root CA is set");
         httpsClient ??= createHttpsClient(rootCAPath).catch((error) => {
             httpsClient = undefined;
             throw error;
@@ -91,7 +93,12 @@ async function createHttpsClient(rootCAPath: string): Promise<HttpsClient> {
             `The TLS root CA file '${rootCAPath}' contains an invalid certificate: ${(error as Error).message}`,
         );
     }
-    return { https, agent: new https.Agent({ ca: rootCA, keepAlive: true, timeout: IDLE_SOCKET_TIMEOUT_MILLIS }) };
+    const agent = new https.Agent({ ca: rootCA, keepAlive: true, timeout: KEEP_ALIVE_SOCKET_TIMEOUT_MILLIS });
+    return { https, agent };
+}
+
+function plainHttpError(origin: string): TlsConfigError {
+    return new TlsConfigError(`A TLS root CA is set, but ${origin} does not use https.`);
 }
 
 function isHttps(url: string): boolean {
@@ -138,6 +145,7 @@ function requestWithAgent(
         request.on("socket", (socket) => {
             // A socket reused from the agent's pool is already connected and needs no connect timeout.
             if (!socket.connecting) return;
+            // The agent's keep-alive timeout applies to new sockets too, and must not cut the connection phase short
             socket.setTimeout(0);
             const connectTimeout = setTimeout(
                 () => request.destroy(new Error("Connection timed out")), CONNECT_TIMEOUT_MILLIS,
@@ -145,7 +153,7 @@ function requestWithAgent(
             socket.once("secureConnect", () => clearTimeout(connectTimeout));
             socket.once("close", () => clearTimeout(connectTimeout));
         });
-        request.setTimeout(IDLE_TIMEOUT_MILLIS, () => request.destroy(new Error("Request timed out")));
+        request.setTimeout(REQUEST_INACTIVITY_TIMEOUT_MILLIS, () => request.destroy(new Error("Request timed out")));
         request.end(init.body);
     });
 }
