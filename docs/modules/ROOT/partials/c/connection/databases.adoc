@@ -156,7 +156,7 @@ Creates a database with the given name based on previously exported another data
 a| `driver` a| The ``TypeDBDriver`` object. a| `struct TypeDBDriver*`
 a| `name` a| The name of the database to be created. a| `const char*`
 a| `schema` a| The schema definition query string for the database. a| `const char*`
-a| `data_file` a| The exported database file path to import the data from. a| `const char*`
+a| `data_file` a| The exported database file path to import the data from, plain or zstd-compressed. a| `const char*`
 |===
 
 [caption=""]

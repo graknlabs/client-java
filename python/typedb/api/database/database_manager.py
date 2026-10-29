@@ -92,7 +92,7 @@ class DatabaseManager(ABC):
 
         :param name: The name of the database to be created
         :param schema: The schema definition query string for the database
-        :param data_file_path: The exported database file path to import the data from
+        :param data_file_path: The exported database file path to import the data from, plain or zstd-compressed
 
         Examples:
         ---------

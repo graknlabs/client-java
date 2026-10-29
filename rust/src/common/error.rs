@@ -252,7 +252,7 @@ error_messages! { MigrationError
     CannotEncodeExportedConcept =
         6: "Cannot encode a concept for export. It's either a version compatibility error or a bug.",
     CannotReadImportFile { reason: String } =
-        7: "Cannot read the import file: {reason}. A compressed file may be truncated or corrupt.",
+        7: "Cannot read the import file: {reason}.",
 }
 
 error_messages! { InternalError

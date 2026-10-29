@@ -147,14 +147,17 @@ pub(crate) fn try_open_import_file(path: impl AsRef<Path>) -> Result<Box<dyn Buf
             reason: source.to_string(),
         })
     };
-    let mut file = File::open(path.as_ref()).map_err(open_error)?;
+    let file = File::open(path.as_ref()).map_err(open_error)?;
+    import_reader(file).map_err(open_error)
+}
+
+fn import_reader(mut source: impl Read + Send + 'static) -> std::io::Result<Box<dyn BufRead + Send>> {
     let mut head = Vec::with_capacity(ZSTD_MAGIC.len());
-    (&mut file).take(ZSTD_MAGIC.len() as u64).read_to_end(&mut head).map_err(open_error)?;
+    source.by_ref().take(ZSTD_MAGIC.len() as u64).read_to_end(&mut head)?;
     let is_zstd = head == ZSTD_MAGIC;
-    let reader = Read::chain(Cursor::new(head), file);
+    let reader = Read::chain(Cursor::new(head), source);
     if is_zstd {
-        let decoder = zstd::stream::read::Decoder::new(reader).map_err(open_error)?;
-        Ok(Box::new(BufReader::new(decoder)))
+        Ok(Box::new(BufReader::new(zstd::stream::read::Decoder::new(reader)?)))
     } else {
         Ok(Box::new(BufReader::new(reader)))
     }

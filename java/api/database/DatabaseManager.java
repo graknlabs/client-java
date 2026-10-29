@@ -88,7 +88,7 @@ public interface DatabaseManager {
      *
      * @param name         The name of the database to be created
      * @param schema       The schema definition query string for the database
-     * @param dataFilePath The exported database file path to import the data from
+     * @param dataFilePath The exported database file path to import the data from, plain or zstd-compressed
      */
     void importFromFile(String name, String schema, String dataFilePath) throws TypeDBDriverException;
 }

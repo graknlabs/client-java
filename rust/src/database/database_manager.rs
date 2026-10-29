@@ -167,7 +167,7 @@ impl DatabaseManager {
     ///
     /// * `name` — The name of the database to be created
     /// * `schema` — The schema definition query string for the database
-    /// * `data_file_path` — The exported database file to import the data from
+    /// * `data_file_path` — The exported database file to import the data from, plain or zstd-compressed
     ///
     /// # Examples
     ///
