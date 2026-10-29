@@ -250,7 +250,9 @@ error_messages! { MigrationError
     CannotDecodeImportedConceptLength =
         5: "Cannot decode a concept length from the provided import file. Make sure to pass a correct database file produced by a TypeDB export operation.",
     CannotEncodeExportedConcept =
-        6: "Cannot encode a concept for export. It's either a version compatibility error or a bug."
+        6: "Cannot encode a concept for export. It's either a version compatibility error or a bug.",
+    CannotReadImportFile { reason: String } =
+        7: "Cannot read the import file: {reason}. A compressed file may be truncated or corrupt.",
 }
 
 error_messages! { InternalError

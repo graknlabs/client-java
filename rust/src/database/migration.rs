@@ -20,7 +20,7 @@
 use std::{
     cmp::max,
     fs::{File, OpenOptions},
-    io::BufRead,
+    io::{BufRead, BufReader, Cursor, Read},
     marker::PhantomData,
     path::Path,
 };
@@ -85,7 +85,7 @@ impl<M: Message + Default, R: BufRead> ProtoMessageIterator<M, R> {
                                 Err(MigrationError::CannotDecodeImportedConceptLength.into())
                             };
                         }
-                        Err(_) => return Err(MigrationError::CannotDecodeImportedConceptLength.into()),
+                        Err(err) => return Err(MigrationError::CannotReadImportFile { reason: err.to_string() }.into()),
                         Ok(_) => continue,
                     }
                 }
@@ -108,7 +108,8 @@ impl<M: Message + Default, R: BufRead> Iterator for ProtoMessageIterator<M, R> {
         while self.buffer.len() < required {
             let to_read = required - self.buffer.len();
             match self.read_more(max(to_read, Self::BUF_CAPACITY)) {
-                Ok(0) | Err(_) => return Some(Err(MigrationError::CannotDecodeImportedConcept.into())),
+                Ok(0) => return Some(Err(MigrationError::CannotDecodeImportedConcept.into())),
+                Err(err) => return Some(Err(MigrationError::CannotReadImportFile { reason: err.to_string() }.into())),
                 Ok(_) => {}
             }
         }
@@ -136,11 +137,25 @@ fn try_open_export_file(path: impl AsRef<Path>, is_new: bool) -> Result<File> {
     })
 }
 
-pub(crate) fn try_open_import_file(path: impl AsRef<Path>) -> Result<File> {
-    File::open(path.as_ref()).map_err(|source| {
+// The magic number that starts every zstd frame, as it is stored (little-endian 0xFD2FB528).
+const ZSTD_MAGIC: [u8; 4] = [0x28, 0xB5, 0x2F, 0xFD];
+
+pub(crate) fn try_open_import_file(path: impl AsRef<Path>) -> Result<Box<dyn BufRead + Send>> {
+    let open_error = |source: std::io::Error| {
         Error::Migration(MigrationError::CannotOpenImportFile {
             path: path.as_ref().to_str().unwrap_or("").to_string(),
             reason: source.to_string(),
         })
-    })
+    };
+    let mut file = File::open(path.as_ref()).map_err(open_error)?;
+    let mut head = Vec::with_capacity(ZSTD_MAGIC.len());
+    (&mut file).take(ZSTD_MAGIC.len() as u64).read_to_end(&mut head).map_err(open_error)?;
+    let is_zstd = head == ZSTD_MAGIC;
+    let reader = Read::chain(Cursor::new(head), file);
+    if is_zstd {
+        let decoder = zstd::stream::read::Decoder::new(reader).map_err(open_error)?;
+        Ok(Box::new(BufReader::new(decoder)))
+    } else {
+        Ok(Box::new(BufReader::new(reader)))
+    }
 }
