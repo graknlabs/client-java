@@ -57,4 +57,4 @@ const driver = new TypeDBHttpDriver({
 });
 ```
 
-In browsers, add the CA to the operating system's or the browser's trust store instead.
+With a root CA, every address must use `https`. In browsers, add the CA to the operating system's or the browser's trust store instead.

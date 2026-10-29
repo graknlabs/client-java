@@ -17,6 +17,7 @@
  * under the License.
  */
 
+import type * as NodeCrypto from "node:crypto";
 import type * as NodeFs from "node:fs/promises";
 import type * as NodeHttps from "node:https";
 import { DriverTlsConfig } from "./params";
@@ -33,15 +34,21 @@ type HttpsClient = { https: typeof NodeHttps, agent: NodeHttps.Agent };
 
 const CONNECT_TIMEOUT_MILLIS = 10_000;
 const IDLE_TIMEOUT_MILLIS = 300_000;
+const IDLE_SOCKET_TIMEOUT_MILLIS = 5_000;
+const PEM_CERTIFICATE_REGEX = /-----BEGIN (TRUSTED )?CERTIFICATE-----[\s\S]*?-----END \1CERTIFICATE-----/g;
 
 export class TlsConfigError extends Error {}
 
-export function createFetch(tls?: DriverTlsConfig): Fetch {
+export function createFetch(tls: DriverTlsConfig | undefined, origins: string[]): Fetch {
     const rootCAPath = tls?.rootCAPath;
     if (rootCAPath === undefined) return (url, init) => fetch(url, init);
+    const plainOrigin = origins.find((origin) => !isHttps(origin));
     let httpsClient: Promise<HttpsClient> | undefined;
     return async (url, init) => {
-        if (!url.startsWith("https:")) return fetch(url, init);
+        if (plainOrigin !== undefined) {
+            throw new TlsConfigError(`A TLS root CA is set, but ${plainOrigin} does not use https.`);
+        }
+        if (!isHttps(url)) throw new Error("The server does not use https, but a TLS root CA is set");
         httpsClient ??= createHttpsClient(rootCAPath).catch((error) => {
             httpsClient = undefined;
             throw error;
@@ -57,10 +64,12 @@ async function createHttpsClient(rootCAPath: string): Promise<HttpsClient> {
     }
     let https: typeof NodeHttps;
     let fs: typeof NodeFs;
+    let crypto: typeof NodeCrypto;
     try {
-        [https, fs] = await Promise.all([
+        [https, fs, crypto] = await Promise.all([
             importNodeModule<typeof NodeHttps>("node:https"),
             importNodeModule<typeof NodeFs>("node:fs/promises"),
+            importNodeModule<typeof NodeCrypto>("node:crypto"),
         ]);
     } catch (error) {
         throw new TlsConfigError(`Cannot load the Node.js modules for TLS: ${(error as Error).message}`);
@@ -71,10 +80,26 @@ async function createHttpsClient(rootCAPath: string): Promise<HttpsClient> {
     } catch (error) {
         throw new TlsConfigError(`Cannot read the TLS root CA file '${rootCAPath}': ${(error as Error).message}`);
     }
-    if (!rootCA.includes("-----BEGIN CERTIFICATE-----")) {
+    const certificates = rootCA.match(PEM_CERTIFICATE_REGEX) ?? [];
+    if (certificates.length === 0) {
         throw new TlsConfigError(`The TLS root CA file '${rootCAPath}' does not contain a PEM certificate.`);
     }
-    return { https, agent: new https.Agent({ ca: rootCA, keepAlive: true }) };
+    try {
+        certificates.forEach((certificate) => new crypto.X509Certificate(certificate));
+    } catch (error) {
+        throw new TlsConfigError(
+            `The TLS root CA file '${rootCAPath}' contains an invalid certificate: ${(error as Error).message}`,
+        );
+    }
+    return { https, agent: new https.Agent({ ca: rootCA, keepAlive: true, timeout: IDLE_SOCKET_TIMEOUT_MILLIS }) };
+}
+
+function isHttps(url: string): boolean {
+    try {
+        return new URL(url).protocol === "https:";
+    } catch {
+        return false;
+    }
 }
 
 function isNodeJs(): boolean {
@@ -96,23 +121,28 @@ function requestWithAgent(
             response.on("data", (chunk: Uint8Array) => chunks.push(chunk));
             response.on("error", reject);
             response.on("end", () => {
-                const status = response.statusCode ?? 0;
-                const headers = new Headers();
-                for (const [name, value] of Object.entries(response.headers)) {
-                    if (value !== undefined) headers.set(name, Array.isArray(value) ? value.join(", ") : value);
+                try {
+                    const status = response.statusCode ?? 0;
+                    const headers = new Headers();
+                    for (const [name, value] of Object.entries(response.headers)) {
+                        if (value !== undefined) headers.set(name, Array.isArray(value) ? value.join(", ") : value);
+                    }
+                    const body = status === 204 || status === 304 ? null : Buffer.concat(chunks);
+                    resolve(new Response(body, { status, statusText: response.statusMessage, headers }));
+                } catch (error) {
+                    reject(error);
                 }
-                const body = status === 204 || status === 304 ? null : Buffer.concat(chunks);
-                resolve(new Response(body, { status, statusText: response.statusMessage, headers }));
             });
         });
         request.on("error", reject);
         request.on("socket", (socket) => {
             // A socket reused from the agent's pool is already connected and needs no connect timeout.
             if (!socket.connecting) return;
+            socket.setTimeout(0);
             const connectTimeout = setTimeout(
                 () => request.destroy(new Error("Connection timed out")), CONNECT_TIMEOUT_MILLIS,
             );
-            socket.once("connect", () => clearTimeout(connectTimeout));
+            socket.once("secureConnect", () => clearTimeout(connectTimeout));
             socket.once("close", () => clearTimeout(connectTimeout));
         });
         request.setTimeout(IDLE_TIMEOUT_MILLIS, () => request.destroy(new Error("Request timed out")));

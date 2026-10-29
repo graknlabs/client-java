@@ -38,8 +38,9 @@ export interface DriverParamsTranslated {
 export interface DriverTlsConfig {
     /**
      * The path to the PEM file with the certificate of the CA that signed the servers' certificates. When set, the
-     * driver trusts only this CA. The file is read on the first `https` request, and requests fail with `HDR3` if
-     * it cannot be used. Supported in Node.js only: browsers trust the certificates of their own trust store.
+     * driver trusts only this CA, and every address must use `https`. The file is read on the first request, and
+     * requests fail with `HDR3` if it cannot be used. Supported in Node.js only: browsers trust the certificates of
+     * their own trust store.
      */
     rootCAPath?: string;
 }
