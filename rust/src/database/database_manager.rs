@@ -197,7 +197,7 @@ impl DatabaseManager {
                     let mut import_stream = server_connection.import_database(name, schema_ref.to_string()).await?;
 
                     let mut item_buffer = Vec::with_capacity(ITEM_BATCH_SIZE);
-                    let mut read_item_iterator = ProtoMessageIterator::<Item, _>::new(reader);
+                    let mut read_item_iterator = ProtoMessageIterator::<Item, _>::new(reader, data_file_path);
 
                     while let Some(item) = read_item_iterator.next() {
                         let item = item?;
