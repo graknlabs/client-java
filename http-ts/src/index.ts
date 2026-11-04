@@ -317,8 +317,6 @@ export class TypeDBHttpDriver {
         return true;
     }
 
-    // Tries the other origins after the current one gave startResult. Returns the first ok response, else startResult
-    // if it is a response, else the last response from another origin, else the last failure.
     private async tryFallbackOrigins<BODY>(method: string, path: string, body: BODY | undefined, options: { headers?: Record<string, string> } | undefined, triedOrigins: Set<string>, startResult: Response | OriginFailure): Promise<TryResult> {
         const startOrigin = this.currentOrigin;
         triedOrigins.add(startOrigin);
@@ -349,9 +347,8 @@ export class TypeDBHttpDriver {
         }
         if (!isOriginFailure(startResult)) {
             // We're returning the response from startOrigin, not a fallback. Iterating may have shifted
-            // currentOrigin; restore so the next request goes back to the same server that produced this
-            // response. Skipped when startOrigin failed, so we don't re-pin the driver to a dead server —
-            // the responsive fallback we landed on is a better next-attempt target.
+            // currentOrigin, and it's better to restore it so the next request goes back to the same server that
+            // produced this response
             this.switchOrigin(startOrigin);
             return startResult;
         }
