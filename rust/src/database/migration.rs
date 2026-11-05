@@ -128,7 +128,7 @@ pub(crate) fn try_open_existing_export_file(path: impl AsRef<Path>) -> Result<Fi
 }
 
 fn try_open_export_file(path: impl AsRef<Path>, is_new: bool) -> Result<File> {
-    OpenOptions::new().write(true).create_new(is_new).open(path.as_ref()).map_err(|source| {
+    OpenOptions::new().write(true).truncate(true).create_new(is_new).open(path.as_ref()).map_err(|source| {
         Error::Migration(MigrationError::CannotCreateExportFile {
             path: path.as_ref().to_str().unwrap_or("").to_string(),
             reason: source.to_string(),

@@ -8,13 +8,13 @@ Available from https://crates.io/crates/typedb-driver
 Documentation: https://typedb.com/docs/drivers/rust/overview
 
 ```sh
-cargo add typedb-driver@3.13.7
+cargo add typedb-driver@3.14.0
 ```
 
 
 ### Java driver
 
-Available through [https://repo.typedb.com](https://cloudsmith.io/~typedb/repos/public-release/packages/detail/maven/typedb-driver/3.13.7/a=noarch;xg=com.typedb/)
+Available through [https://repo.typedb.com](https://cloudsmith.io/~typedb/repos/public-release/packages/detail/maven/typedb-driver/3.14.0/a=noarch;xg=com.typedb/)
 Documentation: https://typedb.com/docs/drivers/java/overview
 
 ```xml
@@ -28,7 +28,7 @@ Documentation: https://typedb.com/docs/drivers/java/overview
     <dependency>
         <groupid>com.typedb</groupid>
         <artifactid>typedb-driver</artifactid>
-        <version>3.13.7</version>
+        <version>3.14.0</version>
     </dependency>
 </dependencies>
 ```
@@ -42,7 +42,7 @@ Available through https://pypi.org
 
 [//]: # (TODO: Python's RC/Alpha/Beta versions are formatted differently. Don't foget to update manually until we make an automation)
 ```
-pip install typedb-driver==3.13.7
+pip install typedb-driver==3.14.0
 ```
 
 ### C# driver
@@ -52,12 +52,12 @@ Documentation: https://typedb.com/docs/drivers/csharp/overview
 
 ```xml
 <ItemGroup>
-    <PackageReference Include="TypeDB.Driver" Version="3.13.7" />
-    <PackageReference Include="TypeDB.Driver.Pinvoke.osx-x64" Version="3.13.7" />
-    <PackageReference Include="TypeDB.Driver.Pinvoke.linux-x64" Version="3.13.7" />
-    <PackageReference Include="TypeDB.Driver.Pinvoke.win-x64" Version="3.13.7" />
-    <PackageReference Include="TypeDB.Driver.Pinvoke.osx-arm64" Version="3.13.7" />
-    <PackageReference Include="TypeDB.Driver.Pinvoke.linux-arm64" Version="3.13.7" />
+    <PackageReference Include="TypeDB.Driver" Version="3.14.0" />
+    <PackageReference Include="TypeDB.Driver.Pinvoke.osx-x64" Version="3.14.0" />
+    <PackageReference Include="TypeDB.Driver.Pinvoke.linux-x64" Version="3.14.0" />
+    <PackageReference Include="TypeDB.Driver.Pinvoke.win-x64" Version="3.14.0" />
+    <PackageReference Include="TypeDB.Driver.Pinvoke.osx-arm64" Version="3.14.0" />
+    <PackageReference Include="TypeDB.Driver.Pinvoke.linux-arm64" Version="3.14.0" />
 </ItemGroup>
 ```
 
@@ -67,36 +67,111 @@ NPM package: https://www.npmjs.com/package/@typedb/driver-http
 Documentation: https://typedb.com/docs/home/install/drivers/
 
 ```
-npm install @typedb/driver-http@3.13.7
+npm install @typedb/driver-http@3.14.0
 ```
 
 ### C driver
 
-Compiled distributions comprising headers and shared libraries available at: https://cloudsmith.io/~typedb/repos/public-release/packages/?q=name:^typedb-driver-clib+version:3.13.7
+Compiled distributions comprising headers and shared libraries available at: https://cloudsmith.io/~typedb/repos/public-release/packages/?q=name:^typedb-driver-clib+version:3.14.0
 
 
 ## New Features
-- **Add delete concepts analyze**
-  
-  This PR adds the new `DeleteConcepts` support across every driver: Rust, Python, Java, C#, and the standalone HTTP TypeScript driver. This matches the updated protocol which gained a `DeleteConcepts` constraint in the query-analysis structure ([typedb-protocol #258](https://github.com/typedb/typedb-protocol/commit/310fef4e4ed2e735ed0fb2dc3248b4a35e604806)), though TypeDB server already emits it correctly.
-  
-  
+
 
 ## Bugs Fixed
-- **Fix document Kind decoding to match protocol wire values**
+- **Put correct integers in concept documents**
   
-  Fix mapping of `fetch` leaf kinds, which incorrectly mapped Attributes to Roles
+  Fix incorrect number values returned in `fetch` documents.
+  
+  Integer values in concept documents were returned as doubles, so any value past 2^53 came back rounded. E.g., `i64::MAX` read as `9223372036854775808`. Fetching an integer attribute now returns it exactly in every driver.
+  
+  Three more faults in the same area are fixed additionally:
+  - a whole double rendered as `2`, indistinguishable from an integer
+  - Java and C# wrapped strings in quotes without escaping, so a value containing a quote, a backslash, or a control character produced output that is not valid JSON. Object keys were written that way in every driver that renders a document, so a fetch key holding a quote broke the document for the drivers that re-parse it
+  - HTTP-TS rounded integers and could not send one back
+  
+  **Breaking changes:**
+  1. `JSON` gains an `Integer(i64)` variant and renames `Number(f64)` to `Double(f64)`, so every existing match on `JSON::Number` must be updated.
+  2. `JSON::Double(2.0).to_string()` is now `"2.0"` rather than `"2"`. Doubles are rendered with `Debug`, so some values change shape rather than only gaining a suffix: `1e-7` and `1.5e300` appear where a full decimal expansion did.
+  3. HTTP-TS returns `bigint` for integers from 2^53 up, which a `number` cannot hold exactly.
+  4. Java `JSON` and C# `IJSON` split `Number` into `Integer` and `Double` for explicit precision: `isNumber`/`asNumber` (`IsNumber`/`AsNumber`) are replaced by `isInteger`/`asInteger` and `isDouble`/`asDouble` (`IsInteger`/`AsInteger`, `IsDouble`/`AsDouble`).
+  ### Example
+  
+  **Data** (`i` is `integer`, `d` is `double`, `dec` is `decimal`):
+  ```
+  math::write>> insert $p isa person, has i 9007199254740992, has d 9007199254740992.56738, has dec 9007199254740992.56738dec;
+  *math::write>> insert $p isa person, has i 10007199254740992, has d 10007199254740992.56738111, has dec 10007199254740992.56738111dec;
+  *math::write>> insert $p isa person, has i 7199254740992, has d 7199254740992.56738111, has dec 7199254740992.56738111dec;
+  *math::write>> insert $p isa person, has i 9007199254740993, has d 9007199254740993.56738, has dec 9007199254740993.56738dec;
+  ```
+  Notice that the last digits are the same for each entity: `2`, `2`, `2`, `3`. 
+  
+  **Before:**
+  ```
+  math::read>> match $p isa person; fetch { $p.* };
+  
+  Finished read query validation and compilation...
+  Streaming documents...
+  {
+    "d": 9007199254740992, // correct
+    "dec": "9007199254740992.56738dec",
+    "i": 9007199254740992 // correct
+  }
+  {
+    "d": 10007199254740992,
+    "dec": "10007199254740992.56738111dec",
+    "i": 10007199254740992
+  }
+  {
+    "d": 7199254740992.567,
+    "dec": "7199254740992.56738111dec",
+    "i": 7199254740992
+  }
+  {
+    "d": 9007199254740994, // double cannot fit, natural
+    "dec": "9007199254740993.56738dec",
+    "i": 9007199254740992 // INCORRECT - must be 3 at the end!
+  }
+  Finished. Total answers: 4
+  ```
+  
+  AFTER:
+  ```
+  math::read>> match $p isa person; fetch { $p.* };
+  
+  Finished read query validation and compilation...
+  Streaming documents...
+  {
+    "d": 9007199254740992.0,
+    "dec": "9007199254740992.56738dec",
+    "i": 9007199254740992 // correct - 2 at the end
+  }
+  {
+    "d": 1.0007199254740992e+16,
+    "dec": "10007199254740992.56738111dec",
+    "i": 10007199254740992
+  }
+  {
+    "d": 7199254740992.567,
+    "dec": "7199254740992.56738111dec",
+    "i": 7199254740992
+  }
+  {
+    "d": 9007199254740994.0, // double cannot fit, natural
+    "dec": "9007199254740993.56738dec",
+    "i": 9007199254740993 // correct - 3 at the end
+  }
+  Finished. Total answers: 4
+  ```
   
   
-- **Limit database import and export memory footprint**
+- **Fix native formatting of negative fractional decimals**
   
-  Database import and export can no longer use gigabytes of RAM on large databases. A 25 GB / 5.6M-instance import that used to drive the client to 22.7 GB (and get OOM-killed) now holds flat at ~44 MB, with identical data and no speed change. 
+  Fixes #929.
   
-  Before, database import used unbounded channels, which, with slower server-side processing (which does much more work compared to direct file reads), placed almost the whole file into RAM, awaiting its data reads. 
+  Negative non-integer decimals use a floor-integer component and a nonnegative fractional component. The native formatter currently concatenates those components, so the value `-9.59` appears as `-10.41dec` in debug output and concept-document results even when its numeric getter is correct.
   
-  The export did not suffer from this issue, because its unbounded channel depends on the inputs from the slower server. However, in case of a unique mismatch between the client/server hardware, its network channel became bounded, too, which did not affect the performance of exports in regular situations.
-  
-  Important: the size of the RAM depends on the size of entries we don't currently check, but the existing caps for the buffers are safe enough to consider potential memory blowouts not at all critical.
+  This change prints the correct sign and magnitude. It does not modify stored values, protocol conversion, Python Decimal-context behavior, or whole-number formatting.
   
   
 
@@ -104,26 +179,22 @@ Compiled distributions comprising headers and shared libraries available at: htt
 
 
 ## Other Improvements
-- **Revert to compatible homebrew version for CI**
+- **Update dependencies to include ordered toml files**
+  Update dependencies to include ordered toml files
+  
+  
+- **Prepare release 3.14.0-rc0**
+  Prepare release 3.14.0-rc0
+  
+  
+  
+- **CI uses prebuilt x86_64 JDK for mac x86_64 tests**
+  
+  The Intel-prefix Homebrew has no x86_64 openjdk bottle on the current mac CI image, so 'brew install maven' compiled openjdk from source and hit the 10m no-output timeout when testing mac snapshots on x86.
+  
+  We now first install the whole JDK binary (Temurin 21 x86_64) as a cask, which is a prebuilt .pkg, then install maven via the native arm64 brew. We then set JAVA_HOME to the x86_64 JDK for tests.
+  
+  
+- **Fix cargo build**
 
-- **Update bazel mod dependency tag vs commit**
-
-- **Update VERSION to 3.13.4**
-
-- **Bump typedb snapshots**
-  
-  Update core and cluster snapshots to get CI green!
-  
-- **Disable implicit init py file creation for bazel python targets**
-  Disable implicit init py file creation for bazel python targets, as advised by: bazel-contrib/rules_python#2945 
-  
-  
-- **Extend migration tests**
-  Extend the migration tests for the Rust driver to include more corner cases of incomplete database imports.
-  
-  
-- **Update server 3.12.3**
-  Update references to a pre-3.12.3 server to test the combination of the server and the driver against the updated set of migration BDD scenarios.
-  
-  
     
