@@ -186,6 +186,140 @@ TypeDBDriver::new(Addresses::try_from_address_str("127.0.0.1:1729").unwrap(), Cr
 --
 ====
 
+[#_struct_TypeDBDriver_new_from_connection_string_connection_string_impl_AsRef_str_driver_options_Option_DriverOptions_]
+==== new_from_connection_string
+
+[tabs]
+====
+async::
++
+--
+[source,rust]
+----
+pub async fn new_from_connection_string(
+    connection_string: impl AsRef<str>,
+    driver_options: Option<DriverOptions>,
+) -> Result<Self>
+----
+
+--
+
+sync::
++
+--
+[source,rust]
+----
+pub fn new_from_connection_string(
+    connection_string: impl AsRef<str>,
+    driver_options: Option<DriverOptions>,
+) -> Result<Self>
+----
+
+--
+====
+
+Creates a new TypeDB connection from a connection string of the form ``typedb://&lt;username&gt;:&lt;password&gt;@&lt;addresses&gt;``, as produced by TypeDB Studio.
+
+Whether the connection uses TLS is determined by the addresses’ ``http://`` or ``https://`` scheme. If ``driver_options`` is given, its TLS configuration must agree with that scheme; otherwise, TLS is configured from the scheme alone, using the system’s native trust roots. Pass ``driver_options`` to override any other default, such as the request timeout.
+
+The addresses are connected to as written, with port 1729 assumed where none is given. If an address carries the HTTP endpoint’s default port 8000 and answers with HTTP rather than gRPC, the driver retries on port 1729 and logs a warning, so a connection string copied from TypeDB Studio works unchanged.
+
+[caption=""]
+.Input parameters
+[cols=",,"]
+[options="header"]
+|===
+|Name |Description |Type
+a| `connection_string` a|  — The connection string describing the addresses and credentials a| `impl AsRef<str>`
+a| `driver_options` a|  — The DriverOptions to connect with. Optional: defaults are derived from the connection string a| `Option<DriverOptions>`
+|===
+
+[caption=""]
+.Returns
+[source,rust]
+----
+Result<Self>
+----
+
+[caption=""]
+.Code examples
+[tabs]
+====
+async::
++
+--
+[source,rust]
+----
+TypeDBDriver::new_from_connection_string("typedb://admin:password@https://127.0.0.1:1729", None).await
+----
+
+--
+
+sync::
++
+--
+[source,rust]
+----
+TypeDBDriver::new_from_connection_string("typedb://admin:password@https://127.0.0.1:1729", None)
+----
+
+--
+====
+
+[#_struct_TypeDBDriver_new_from_connection_string_with_description_connection_string_impl_AsRef_str_driver_options_Option_DriverOptions_driver_lang_impl_AsRef_str_]
+==== new_from_connection_string_with_description
+
+[tabs]
+====
+async::
++
+--
+[source,rust]
+----
+pub async fn new_from_connection_string_with_description(
+    connection_string: impl AsRef<str>,
+    driver_options: Option<DriverOptions>,
+    driver_lang: impl AsRef<str>,
+) -> Result<Self>
+----
+
+--
+
+sync::
++
+--
+[source,rust]
+----
+pub fn new_from_connection_string_with_description(
+    connection_string: impl AsRef<str>,
+    driver_options: Option<DriverOptions>,
+    driver_lang: impl AsRef<str>,
+) -> Result<Self>
+----
+
+--
+====
+
+Creates a new TypeDB connection from a connection string, with a description. This method is generally used by TypeDB drivers built on top of the Rust driver. In other cases, use <<#_struct_TypeDBDriver_method_new_from_connection_string,`Self::new_from_connection_string`>> instead.
+
+[caption=""]
+.Input parameters
+[cols=",,"]
+[options="header"]
+|===
+|Name |Description |Type
+a| `connection_string` a|  — The connection string describing the addresses and credentials a| `impl AsRef<str>`
+a| `driver_options` a|  — The DriverOptions to connect with. Optional: defaults are derived from the connection string a| `Option<DriverOptions>`
+a| `driver_lang` a|  — The language of the driver connecting to the server a| `impl AsRef<str>`
+|===
+
+[caption=""]
+.Returns
+[source,rust]
+----
+Result<Self>
+----
+
 [#_struct_TypeDBDriver_new_with_description_addresses_Addresses_credentials_Credentials_driver_options_DriverOptions_driver_lang_impl_AsRef_str_]
 ==== new_with_description
 

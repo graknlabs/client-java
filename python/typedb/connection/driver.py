@@ -31,7 +31,8 @@ from typedb.database.database_manager import _DatabaseManager
 from typedb.connection.server import _Server
 from typedb.connection.transaction import _Transaction
 from typedb.native_driver_wrapper import driver_new, driver_new_with_addresses, \
-    driver_new_with_address_translation, driver_is_open, driver_force_close, \
+    driver_new_with_address_translation, driver_new_from_connection_string, init_logging, \
+    driver_is_open, driver_force_close, \
     driver_servers, driver_primary_server, driver_server_version, \
     server_iterator_next, TypeDBDriver as NativeDriver, \
     TypeDBDriverExceptionNative
@@ -74,6 +75,24 @@ class _Driver(Driver, NativeWrapper[NativeDriver]):
         except TypeDBDriverExceptionNative as e:
             raise TypeDBDriverException.of(e) from None
         super().__init__(native_driver)
+
+    @classmethod
+    def from_connection_string(cls, connection_string: str,
+                               driver_options: Optional[DriverOptions] = None) -> _Driver:
+        require_non_null(connection_string, "connection_string")
+        init_logging()
+
+        try:
+            native_driver = driver_new_from_connection_string(
+                connection_string,
+                driver_options.native_object if driver_options else None,
+                Driver.LANGUAGE)
+        except TypeDBDriverExceptionNative as e:
+            raise TypeDBDriverException.of(e) from None
+        # The addresses and credentials come from the string, so __init__'s dispatch does not apply.
+        driver = cls.__new__(cls)
+        NativeWrapper.__init__(driver, native_driver)
+        return driver
 
     @property
     def _native_object_not_owned_exception(self) -> TypeDBDriverException:

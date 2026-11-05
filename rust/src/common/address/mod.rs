@@ -17,8 +17,9 @@
  * under the License.
  */
 
-pub use self::{address::Address, addresses::Addresses};
+pub use self::{address::Address, addresses::Addresses, connection_string::ConnectionString};
 
 pub(crate) mod address;
 pub(crate) mod address_translation;
 pub(crate) mod addresses;
+pub(crate) mod connection_string;

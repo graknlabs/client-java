@@ -192,6 +192,31 @@ a| `username` a|  a| `string`
 .Returns
 `Promise<ApiResponse>`
 
+[#_TypeDBHttpDriver_fromConnectionString_connectionString_string]
+==== method ``fromConnectionString``
+
+[source,typescript]
+----
+fromConnectionString(connectionString: string): Promise<TypeDBHttpDriver>
+----
+
+Opens a driver using the addresses and credentials held in a connection string of the form ``typedb://&lt;username&gt;:&lt;password&gt;@&lt;addresses&gt;``. Whether the connection uses TLS is determined by the addresses' ``http://`` or ``https://`` scheme. See ``parseConnectionString``.
+
+The addresses are used as written, with port 8000 assumed where none is given. If an address carries the gRPC endpoint's default port 1729 and does not answer as TypeDB's HTTP API, the driver retries on port 8000 and warns on the console, so a connection string written for a gRPC driver works unchanged. The check is one unauthenticated request to the version endpoint; it is skipped when no address carries port 1729.
+
+[caption=""]
+.Input parameters
+[cols=",,"]
+[options="header"]
+|===
+|Name |Description |Type
+a| `connectionString` a|  a| `string`
+|===
+
+[caption=""]
+.Returns
+`Promise<TypeDBHttpDriver>`
+
 [#_TypeDBHttpDriver_getCurrentUser_]
 ==== method ``getCurrentUser``
 

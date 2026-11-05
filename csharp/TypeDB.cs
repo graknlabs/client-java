@@ -83,6 +83,49 @@ namespace TypeDB.Driver
         }
 
         /// <summary>
+        /// Open a TypeDB Driver using the addresses and credentials held in a connection string of the
+        /// form <c>typedb://&lt;username&gt;:&lt;password&gt;\@&lt;addresses&gt;</c>.
+        /// </summary>
+        /// <remarks>
+        /// Whether the connection uses TLS is determined by the addresses' <c>http://</c> or
+        /// <c>https://</c> scheme, using the system's native trust roots.
+        /// The addresses are connected to as written, with port 1729 assumed where none is given. If
+        /// an address carries the HTTP endpoint's default port 8000 and answers with HTTP rather than
+        /// gRPC, the driver retries on port 1729 and logs a warning, so a connection string copied
+        /// from TypeDB Studio works unchanged.
+        /// </remarks>
+        /// <param name="connectionString">The connection string holding the addresses and credentials to connect with.</param>
+        /// <example>
+        /// <code>
+        /// TypeDB.DriverFromConnectionString(connectionString);
+        /// </code>
+        /// </example>
+        public static IDriver DriverFromConnectionString(string connectionString)
+        {
+            return TypeDBDriver.FromConnectionString(connectionString, null);
+        }
+
+        /// <summary>
+        /// Open a TypeDB Driver using the addresses and credentials held in a connection string, with
+        /// explicit driver options.
+        /// </summary>
+        /// <remarks>
+        /// The connection string's <c>http://</c> or <c>https://</c> scheme is authoritative: the
+        /// given options' TLS configuration must agree with it.
+        /// </remarks>
+        /// <param name="connectionString">The connection string holding the addresses and credentials to connect with.</param>
+        /// <param name="driverOptions">The driver connection options to connect with.</param>
+        /// <example>
+        /// <code>
+        /// TypeDB.DriverFromConnectionString(connectionString, driverOptions);
+        /// </code>
+        /// </example>
+        public static IDriver DriverFromConnectionString(string connectionString, DriverOptions driverOptions)
+        {
+            return TypeDBDriver.FromConnectionString(connectionString, driverOptions);
+        }
+
+        /// <summary>
         /// Factory class to instantiate new <c>IValue</c> concepts and build <c>IGivenRows</c> for use as query inputs.
         /// </summary>
         public static class Concept

@@ -56,6 +56,35 @@ namespace TypeDB.Driver.Connection
             _userManager = new UserManager(NativeObject);
         }
 
+        private TypeDBDriver(Pinvoke.TypeDBDriver nativeDriver)
+            : base(nativeDriver)
+        {
+            _databaseManager = new DatabaseManager(NativeObject);
+            _userManager = new UserManager(NativeObject);
+        }
+
+        /// <summary>
+        /// Opens a driver using the addresses and credentials held in a connection string. A static
+        /// factory, because a connection string is not distinguishable from an address by its type.
+        /// </summary>
+        /// <param name="connectionString">The connection string holding the addresses and credentials to connect with.</param>
+        /// <param name="driverOptions">The driver connection options to connect with, or null to derive them from the connection string.</param>
+        public static TypeDBDriver FromConnectionString(string connectionString, DriverOptions? driverOptions)
+        {
+            Validator.RequireNonNull(connectionString, nameof(connectionString));
+            try
+            {
+                return new TypeDBDriver(Pinvoke.typedb_driver.driver_new_from_connection_string(
+                    connectionString,
+                    driverOptions?.NativeObject,
+                    IDriver.Language));
+            }
+            catch (Pinvoke.Error e)
+            {
+                throw new TypeDBDriverException(e);
+            }
+        }
+
         private static Pinvoke.TypeDBDriver Open(string address, Credentials credentials, DriverOptions driverOptions)
         {
             Validator.RequireNonNull(address, nameof(address));

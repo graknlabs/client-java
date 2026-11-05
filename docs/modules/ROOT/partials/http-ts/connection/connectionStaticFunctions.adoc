@@ -28,6 +28,29 @@ a| `params` a|  a| `DriverParams`
 .Returns
 `string[]`
 
+[#_fallbackParams_fallbackParams_params_DriverParams]
+==== method ``fallbackParams``
+
+[source,typescript]
+----
+fallbackParams(params: DriverParams): DriverParams
+----
+
+The parameters with every occurrence of the gRPC endpoint's default port replaced by ``CONNECTION_STRING_DEFAULT_PORT``, or ``undefined`` if no address carries it. A connection string written for the gRPC endpoint names the same server as the HTTP endpoint, so a driver whose connection to the written port is not answered by TypeDB's HTTP API retries here.
+
+[caption=""]
+.Input parameters
+[cols=",,"]
+[options="header"]
+|===
+|Name |Description |Type
+a| `params` a|  a| `DriverParams`
+|===
+
+[caption=""]
+.Returns
+`DriverParams`
+
 [#_hostPortFromOrigin_hostPortFromOrigin_origin_string]
 ==== method ``hostPortFromOrigin``
 
@@ -96,6 +119,33 @@ a| `params` a|  a| `DriverParams`
 [caption=""]
 .Returns
 `params is DriverParamsTranslated`
+
+[#_parseConnectionString_parseConnectionString_connectionString_string]
+==== method ``parseConnectionString``
+
+[source,typescript]
+----
+parseConnectionString(connectionString: string): DriverParams
+----
+
+Parses a TypeDB connection string of the form ``typedb://&lt;username&gt;:&lt;password&gt;@&lt;addresses&gt;[/&lt;database&gt;][?&lt;params&gt;]`` into driver parameters.
+
+Addresses are comma-separated, and each one must carry an explicit ``http://`` or ``https://`` scheme; all addresses must agree on it. Each address may instead be a ``public;private`` pair, which produces translated addresses; pairs cannot be mixed with plain addresses.
+
+An address without a port is assumed to be on ``CONNECTION_STRING_DEFAULT_PORT``; an explicit port is kept as written. The database path segment and any query parameters are accepted and discarded.
+
+[caption=""]
+.Input parameters
+[cols=",,"]
+[options="header"]
+|===
+|Name |Description |Type
+a| `connectionString` a|  a| `string`
+|===
+
+[caption=""]
+.Returns
+`DriverParams`
 
 [#_remoteOrigin_remoteOrigin_params_DriverParams]
 ==== method ``remoteOrigin``

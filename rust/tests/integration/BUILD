@@ -57,6 +57,27 @@ rust_test(
 )
 
 rust_test(
+    name = "test_connection_string",
+    srcs = ["connection_string.rs"],
+    # The vectors count as a source for the Cargo sync aspect, which otherwise needs exactly one.
+    crate_root = "connection_string.rs",
+    compile_data = ["//tool/test:connection-string-vectors"],
+    deps = [
+        "//rust:typedb_driver",
+        "@crates//:serde_json",
+    ],
+)
+
+rust_test(
+    name = "test_connection_string_connect",
+    srcs = ["connection_string_connect.rs"],
+    deps = [
+        "//rust:typedb_driver",
+        "@crates//:async-std",
+    ],
+)
+
+rust_test(
     name = "test_values",
     srcs = ["values.rs"],
     deps = [

@@ -77,6 +77,28 @@ class TypeDB:
         else:
             return _Driver(list(addresses), credentials, driver_options)
 
+    @staticmethod
+    def driver_from_connection_string(connection_string: str,
+                                      driver_options: Optional[DriverOptions] = None) -> Driver:
+        """
+        Creates a connection to TypeDB from a connection string of the form
+        ``typedb://<username>:<password>@<addresses>``.
+
+        Whether the connection uses TLS is determined by the addresses' ``http://`` or ``https://``
+        scheme. If driver options are given, their TLS configuration must agree with that scheme;
+        otherwise, TLS is configured from the scheme alone, using the system's native trust roots.
+
+        The addresses are connected to as written, with port 1729 assumed where none is given. If an
+        address carries the HTTP endpoint's default port 8000 and answers with HTTP rather than gRPC,
+        the driver retries on port 1729 and logs a warning, so a connection string copied from TypeDB
+        Studio works unchanged.
+
+        :param connection_string: The connection string holding the addresses and credentials.
+        :param driver_options: The driver connection options to connect with. Optional: defaults are
+        derived from the connection string.
+        """
+        return _Driver.from_connection_string(connection_string, driver_options)
+
     class Concept:
         """Factory class to instantiate new ``Value`` concepts and build ``GivenRows`` for use as query inputs."""
 

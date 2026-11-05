@@ -103,12 +103,20 @@
 	name = "test_values"
 
 [[test]]
+	path = "tests/integration/connection_string_connect.rs"
+	name = "test_connection_string_connect"
+
+[[test]]
 	path = "tests/integration/driver.rs"
 	name = "test_driver"
 
 [[test]]
 	path = "tests/integration/example.rs"
 	name = "test_example"
+
+[[test]]
+	path = "tests/integration/connection_string.rs"
+	name = "test_connection_string"
 
 [[test]]
 	path = "tests/behaviour/connection/database.rs"

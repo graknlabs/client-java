@@ -90,6 +90,48 @@ public class TypeDB {
     }
 
     /**
+     * Open a TypeDB Driver using the addresses and credentials held in a connection string of the
+     * form <code>typedb://&lt;username&gt;:&lt;password&gt;@&lt;addresses&gt;</code>.
+     *
+     * <p>Whether the connection uses TLS is determined by the addresses' <code>http://</code> or
+     * <code>https://</code> scheme, using the system's native trust roots.
+     *
+     * <p>The addresses are connected to as written, with port 1729 assumed where none is given. If
+     * an address carries the HTTP endpoint's default port 8000 and answers with HTTP rather than
+     * gRPC, the driver retries on port 1729 and logs a warning, so a connection string copied from
+     * TypeDB Studio works unchanged.
+     *
+     * <h3>Examples</h3>
+     * <pre>
+     * TypeDB.driverFromConnectionString(connectionString);
+     * </pre>
+     *
+     * @param connectionString The connection string holding the addresses and credentials to connect with
+     */
+    public static Driver driverFromConnectionString(String connectionString) throws TypeDBDriverException {
+        return DriverImpl.fromConnectionString(connectionString, null);
+    }
+
+    /**
+     * Open a TypeDB Driver using the addresses and credentials held in a connection string, with
+     * explicit driver options.
+     *
+     * <p>The connection string's <code>http://</code> or <code>https://</code> scheme is
+     * authoritative: the given options' TLS configuration must agree with it.
+     *
+     * <h3>Examples</h3>
+     * <pre>
+     * TypeDB.driverFromConnectionString(connectionString, driverOptions);
+     * </pre>
+     *
+     * @param connectionString The connection string holding the addresses and credentials to connect with
+     * @param driverOptions    The driver connection options to connect with
+     */
+    public static Driver driverFromConnectionString(String connectionString, DriverOptions driverOptions) throws TypeDBDriverException {
+        return DriverImpl.fromConnectionString(connectionString, driverOptions);
+    }
+
+    /**
      * Factory class to instantiate new <code>Value</code> concepts from raw values.
      * These can then be used in the <code>GivenRows</code> of a query.
      */
