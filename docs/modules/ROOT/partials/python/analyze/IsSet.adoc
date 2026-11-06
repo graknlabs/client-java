@@ -1,0 +1,31 @@
+[#_IsSet]
+[.doc-api-reference-driver]
+=== IsSet
+
+`class`
+
+*Package*: `typedb.api.analyze.constraint`
+
+*Supertypes:*
+
+* `Constraint`
+
+Represents an isset constraint: isset &lt;variables&gt;
+
+// tag::methods[]
+[#_IsSet_variables_]
+==== method ``variables``
+
+[source,python]
+----
+variables() -> Iterator['ConstraintVertex']
+----
+
+
+
+[caption=""]
+.Returns
+`Iterator['ConstraintVertex']`
+
+// end::methods[]
+

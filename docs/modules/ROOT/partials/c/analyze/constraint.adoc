@@ -321,6 +321,22 @@ Unwraps the ``Constraint`` instance as an ``Isa`` constraint, and returns the ty
 .Returns
 `struct ConstraintVertex*`
 
+[#_constraint_isset_get_variables]
+==== function ``constraint_isset_get_variables``
+
+[source,c]
+----
+struct ConstraintVertexIterator* constraint_isset_get_variables(const struct ConstraintWithSpan* constraint)
+----
+
+
+
+Unwraps the ``Constraint`` instance as a ``IsSet`` and returns the specified variables. Will panic if the Constraint is not a IsSet constraint.
+
+[caption=""]
+.Returns
+`struct ConstraintVertexIterator*`
+
 [#_constraint_kind_get_kind]
 ==== function ``constraint_kind_get_kind``
 

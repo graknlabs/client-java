@@ -114,6 +114,20 @@ Constraint.Is asIs()
 .Returns
 `Constraint.Is`
 
+[#_Constraint_Sub_asIsSet_]
+==== method ``asIsSet``
+
+[source,java]
+----
+Constraint.IsSet asIsSet()
+----
+
+
+
+[caption=""]
+.Returns
+`Constraint.IsSet`
+
 [#_Constraint_Sub_asIsa_]
 ==== method ``asIsa``
 
@@ -386,6 +400,20 @@ boolean isIid()
 [source,java]
 ----
 boolean isIs()
+----
+
+
+
+[caption=""]
+.Returns
+`boolean`
+
+[#_Constraint_Sub_isIsSet_]
+==== method ``isIsSet``
+
+[source,java]
+----
+boolean isIsSet()
 ----
 
 
