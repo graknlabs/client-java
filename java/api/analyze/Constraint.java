@@ -71,6 +71,8 @@ public interface Constraint {
 
     boolean isValue();
 
+    boolean isIsSet();
+
     boolean isOr();
 
     boolean isNot();
@@ -108,6 +110,8 @@ public interface Constraint {
     Label asLabel();
 
     Value asValue();
+
+    IsSet asIsSet();
 
     Or asOr();
 
@@ -278,6 +282,13 @@ public interface Constraint {
         ConstraintVertex variable();
 
         String label();
+    }
+
+    /**
+     * Represents an isset constraint: isset <variables>
+     */
+    interface IsSet extends Constraint {
+        Stream<? extends ConstraintVertex> variables();
     }
 
     /**

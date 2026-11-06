@@ -117,6 +117,11 @@ namespace TypeDB.Driver.Api.Analyze
         bool IsValue { get; }
 
         /// <summary>
+        /// Checks if this constraint is an isset constraint.
+        /// </summary>
+        bool IsIsSet { get; }
+
+        /// <summary>
         /// Checks if this constraint is an or constraint.
         /// </summary>
         bool IsOr { get; }
@@ -210,6 +215,11 @@ namespace TypeDB.Driver.Api.Analyze
         /// Casts this constraint to a value constraint.
         /// </summary>
         IValueConstraint AsValue();
+
+        /// <summary>
+        /// Casts this constraint to an isset constraint.
+        /// </summary>
+        IIsSet AsIsSet();
 
         /// <summary>
         /// Casts this constraint to an or constraint.
@@ -552,6 +562,17 @@ namespace TypeDB.Driver.Api.Analyze
         /// The value type.
         /// </summary>
         string ValueType { get; }
+    }
+
+    /// <summary>
+    /// Represents an isset constraint: isset variables
+    /// </summary>
+    public interface IIsSet : IConstraint
+    {
+        /// <summary>
+        /// The variables being checked.
+        /// </summary>
+        IEnumerable<IConstraintVertex> Variables { get; }
     }
 
     /// <summary>

@@ -71,6 +71,8 @@ public abstract class ConstraintImpl extends NativeObject<com.typedb.driver.jni.
                 return new LabelImpl(constraint);
             case Value:
                 return new ValueImpl(constraint);
+            case IsSet:
+                return new IsSetImpl(constraint);
             case Or:
                 return new OrImpl(constraint);
             case Not:
@@ -177,6 +179,10 @@ public abstract class ConstraintImpl extends NativeObject<com.typedb.driver.jni.
         return false;
     }
 
+    public boolean isIsSet() {
+        return false;
+    }
+
     public boolean isOr() {
         return false;
     }
@@ -256,6 +262,10 @@ public abstract class ConstraintImpl extends NativeObject<com.typedb.driver.jni.
 
     public ValueImpl asValue() {
         throw new TypeDBDriverException(INVALID_CONSTRAINT_CASTING, className(this.getClass()), className(ValueImpl.class));
+    }
+
+    public IsSetImpl asIsSet() {
+        throw new TypeDBDriverException(INVALID_CONSTRAINT_CASTING, className(this.getClass()), className(IsSetImpl.class));
     }
 
     public OrImpl asOr() {
@@ -695,6 +705,26 @@ public abstract class ConstraintImpl extends NativeObject<com.typedb.driver.jni.
 
         public String valueType() {
             return typedb_driver.constraint_value_get_value_type(nativeObject);
+        }
+    }
+
+    public static class IsSetImpl extends ConstraintImpl implements Constraint.IsSet {
+        public IsSetImpl(com.typedb.driver.jni.ConstraintWithSpan nativeObject) {
+            super(nativeObject);
+        }
+
+        @Override
+        public boolean isIsSet() {
+            return true;
+        }
+
+        @Override
+        public IsSetImpl asIsSet() {
+            return this;
+        }
+
+        public Stream<ConstraintVertexImpl> variables() {
+            return new NativeIterator<>(typedb_driver.constraint_isset_get_variables(nativeObject)).stream().map(ConstraintVertexImpl::new);
         }
     }
 
