@@ -311,6 +311,7 @@
 %nojavaexception constraint_label_get_label;
 %nojavaexception constraint_value_get_attribute_type;
 %nojavaexception constraint_value_get_value_type;
+%nojavaexception constraint_isset_get_variables;
 %nojavaexception constraint_or_get_branches;
 %nojavaexception constraint_not_get_conjunction;
 %nojavaexception constraint_try_get_conjunction;
