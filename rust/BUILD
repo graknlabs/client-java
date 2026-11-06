@@ -44,6 +44,7 @@ typedb_driver_deps = [
     "@crates//:tracing",
     "@crates//:tracing-subscriber",
     "@crates//:uuid",
+    "@crates//:zstd",
     "@typedb_protocol//grpc/rust:typedb_protocol",
 ]
 typedb_driver_proc_macro_deps = [

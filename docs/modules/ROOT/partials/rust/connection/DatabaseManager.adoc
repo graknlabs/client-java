@@ -324,7 +324,7 @@ Creates a database with the given name based on previously exported another data
 |Name |Description |Type
 a| `name` a|  — The name of the database to be created a| `impl Into<String>`
 a| `schema` a|  — The schema definition query string for the database a| `impl Into<String>`
-a| `data_file_path` a|  — The exported database file to import the data from a| `impl AsRef<Path>`
+a| `data_file_path` a|  — The exported database file to import the data from, plain or zstd-compressed a| `impl AsRef<Path>`
 |===
 
 [caption=""]

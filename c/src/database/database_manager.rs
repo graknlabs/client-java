@@ -86,7 +86,7 @@ pub extern "C" fn databases_create(driver: *mut TypeDBDriver, name: *const c_cha
 /// @param driver The <code>TypeDBDriver</code> object.
 /// @param name The name of the database to be created.
 /// @param schema The schema definition query string for the database.
-/// @param data_file The exported database file path to import the data from.
+/// @param data_file The exported database file path to import the data from, plain or zstd-compressed.
 #[unsafe(no_mangle)]
 pub extern "C" fn databases_import_from_file(
     driver: *mut TypeDBDriver,

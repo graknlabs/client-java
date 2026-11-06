@@ -17,7 +17,7 @@
  * under the License.
  */
 
-use std::{io::BufReader, path::Path, sync::Arc};
+use std::{path::Path, sync::Arc};
 
 use itertools::Itertools;
 use typedb_protocol::migration::Item;
@@ -167,7 +167,7 @@ impl DatabaseManager {
     ///
     /// * `name` — The name of the database to be created
     /// * `schema` — The schema definition query string for the database
-    /// * `data_file_path` — The exported database file to import the data from
+    /// * `data_file_path` — The exported database file to import the data from, plain or zstd-compressed
     ///
     /// # Examples
     ///
@@ -193,11 +193,11 @@ impl DatabaseManager {
             .execute(ServerRouting::Auto, move |server_connection| {
                 let name = name.clone();
                 async move {
-                    let file = try_open_import_file(data_file_path)?;
+                    let reader = try_open_import_file(data_file_path)?;
                     let mut import_stream = server_connection.import_database(name, schema_ref.to_string()).await?;
 
                     let mut item_buffer = Vec::with_capacity(ITEM_BATCH_SIZE);
-                    let mut read_item_iterator = ProtoMessageIterator::<Item, _>::new(BufReader::new(file));
+                    let mut read_item_iterator = ProtoMessageIterator::<Item, _>::new(reader, data_file_path);
 
                     while let Some(item) = read_item_iterator.next() {
                         let item = item?;

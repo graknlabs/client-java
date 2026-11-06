@@ -318,6 +318,7 @@ impl TryFromProto<conjunction_proto::constraint::Constraint> for Constraint {
             ConstraintProto::DeleteConcepts(constraint_proto::DeleteConcepts { variables }) => {
                 Constraint::DeleteConcepts { variables: vec_from_proto(variables)? }
             }
+            ConstraintProto::IsSet(_) => todo!("IsSet constraint is not covered yet"),
         };
         Ok(constraint)
     }

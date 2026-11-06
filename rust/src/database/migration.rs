@@ -20,7 +20,7 @@
 use std::{
     cmp::max,
     fs::{File, OpenOptions},
-    io::BufRead,
+    io::{BufRead, BufReader, Read},
     marker::PhantomData,
     path::Path,
 };
@@ -42,6 +42,7 @@ pub(crate) enum DatabaseExportAnswer {
 
 pub struct ProtoMessageIterator<M: Message + Default, R: BufRead> {
     reader: R,
+    path: String,
     buffer: BytesMut,
     _phantom_data: PhantomData<M>,
 }
@@ -51,8 +52,13 @@ impl<M: Message + Default, R: BufRead> ProtoMessageIterator<M, R> {
     // prost's length delimiters take up to 10 bytes
     const MAX_LENGTH_DELIMITER_LEN: usize = 10;
 
-    pub fn new(reader: R) -> Self {
-        Self { reader, buffer: BytesMut::with_capacity(Self::BUF_CAPACITY), _phantom_data: PhantomData }
+    pub fn new(reader: R, path: impl AsRef<Path>) -> Self {
+        let path = path_string(path);
+        Self { reader, path, buffer: BytesMut::with_capacity(Self::BUF_CAPACITY), _phantom_data: PhantomData }
+    }
+
+    fn read_error(&self, source: std::io::Error) -> Error {
+        MigrationError::CannotReadImportFile { path: self.path.clone(), reason: source.to_string() }.into()
     }
 
     fn read_more(&mut self, bytes_to_read: usize) -> std::io::Result<usize> {
@@ -85,7 +91,7 @@ impl<M: Message + Default, R: BufRead> ProtoMessageIterator<M, R> {
                                 Err(MigrationError::CannotDecodeImportedConceptLength.into())
                             };
                         }
-                        Err(_) => return Err(MigrationError::CannotDecodeImportedConceptLength.into()),
+                        Err(err) => return Err(self.read_error(err)),
                         Ok(_) => continue,
                     }
                 }
@@ -108,7 +114,8 @@ impl<M: Message + Default, R: BufRead> Iterator for ProtoMessageIterator<M, R> {
         while self.buffer.len() < required {
             let to_read = required - self.buffer.len();
             match self.read_more(max(to_read, Self::BUF_CAPACITY)) {
-                Ok(0) | Err(_) => return Some(Err(MigrationError::CannotDecodeImportedConcept.into())),
+                Ok(0) => return Some(Err(MigrationError::CannotDecodeImportedConcept.into())),
+                Err(err) => return Some(Err(self.read_error(err))),
                 Ok(_) => {}
             }
         }
@@ -130,17 +137,32 @@ pub(crate) fn try_open_existing_export_file(path: impl AsRef<Path>) -> Result<Fi
 fn try_open_export_file(path: impl AsRef<Path>, is_new: bool) -> Result<File> {
     OpenOptions::new().write(true).truncate(true).create_new(is_new).open(path.as_ref()).map_err(|source| {
         Error::Migration(MigrationError::CannotCreateExportFile {
-            path: path.as_ref().to_str().unwrap_or("").to_string(),
+            path: path_string(path.as_ref()),
             reason: source.to_string(),
         })
     })
 }
 
-pub(crate) fn try_open_import_file(path: impl AsRef<Path>) -> Result<File> {
-    File::open(path.as_ref()).map_err(|source| {
+pub(crate) fn try_open_import_file(path: impl AsRef<Path>) -> Result<Box<dyn BufRead + Send>> {
+    let open_error = |source: std::io::Error| {
         Error::Migration(MigrationError::CannotOpenImportFile {
-            path: path.as_ref().to_str().unwrap_or("").to_string(),
+            path: path_string(path.as_ref()),
             reason: source.to_string(),
         })
-    })
+    };
+    let file = File::open(path.as_ref()).map_err(open_error)?;
+    import_reader(file).map_err(open_error)
+}
+
+fn import_reader(source: impl Read + Send + 'static) -> std::io::Result<Box<dyn BufRead + Send>> {
+    let mut reader = BufReader::new(source);
+    if reader.fill_buf()?.starts_with(&zstd::zstd_safe::MAGICNUMBER.to_le_bytes()) {
+        Ok(Box::new(BufReader::new(zstd::stream::read::Decoder::with_buffer(reader)?)))
+    } else {
+        Ok(Box::new(reader))
+    }
+}
+
+fn path_string(path: impl AsRef<Path>) -> String {
+    path.as_ref().to_str().unwrap_or("").to_string()
 }

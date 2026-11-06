@@ -138,7 +138,7 @@ Creates a database with the given name based on previously exported another data
 |Name |Description |Type |Default Value
 a| `name` a| The name of the database to be created a| `str` a| 
 a| `schema` a| The schema definition query string for the database a| `str` a| 
-a| `data_file_path` a| The exported database file path to import the data from a| `str` a| 
+a| `data_file_path` a| The exported database file path to import the data from, plain or zstd-compressed a| `str` a| 
 |===
 
 [caption=""]

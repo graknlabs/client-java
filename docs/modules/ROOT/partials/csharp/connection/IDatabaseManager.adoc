@@ -155,7 +155,7 @@ Creates a database with the given name based on previously exported data. This i
 |Name |Description |Type
 a| `name` a| The name of the database to be created. a| `string`
 a| `schema` a| The schema definition query string for the database. a| `string`
-a| `dataFile` a| The exported database file path to import the data from. a| `string`
+a| `dataFile` a| The exported database file path to import the data from, plain or zstd-compressed. a| `string`
 |===
 
 [caption=""]

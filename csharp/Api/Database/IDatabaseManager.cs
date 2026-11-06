@@ -86,7 +86,7 @@ namespace TypeDB.Driver.Api
          *
          * @param name The name of the database to be created.
          * @param schema The schema definition query string for the database.
-         * @param dataFile The exported database file path to import the data from.
+         * @param dataFile The exported database file path to import the data from, plain or zstd-compressed.
          */
         void ImportFromFile(string name, string schema, string dataFile);
     }

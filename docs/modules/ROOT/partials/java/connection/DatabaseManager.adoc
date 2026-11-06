@@ -153,7 +153,7 @@ Creates a database with the given name based on previously exported another data
 |Name |Description |Type
 a| `name` a| The name of the database to be created a| `java.lang.String`
 a| `schema` a| The schema definition query string for the database a| `java.lang.String`
-a| `dataFilePath` a| The exported database file path to import the data from a| `java.lang.String`
+a| `dataFilePath` a| The exported database file path to import the data from, plain or zstd-compressed a| `java.lang.String`
 |===
 
 [caption=""]
