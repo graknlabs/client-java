@@ -260,7 +260,6 @@ native_artifact_files.artifact(
     artifact_name = "typedb-all-{platform}-{version}.{ext}",
     commit = "bcf527e4a83a70cae0922e3c24b5cea67b7dc5e3",
 )
-# IMPORTANT: must be CLUSTERED typedb-cluster (with multi-node support)!
 native_artifact_files.artifact(
     name = "typedb_cluster_artifact",
     group_name = "typedb-cluster-all-{platform}",

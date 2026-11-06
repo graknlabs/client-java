@@ -18,6 +18,7 @@
  */
 
 import { DriverParams, remoteOrigin, resolveOrigin, allOrigins } from "./params";
+import { createFetch, Fetch, FetchInit, TlsConfigError } from "./transport";
 import {
     AnalyzeResponse,
     ApiErrorResponse,
@@ -41,12 +42,11 @@ const HTTP_MISDIRECTED = 421;
 
 // Codes that mean "this origin is not currently usable for signin" — treated like a
 // connection failure so the caller falls back to another origin instead of waiting:
-//   HDR2  - local driver error: could not reach the server
 //   SRV14 - server returned "Not yet initialised". Happens on a freshly restarted secondary
 //           that has not yet loaded the system DB, or briefly on a node mid-promotion. Either
 //           way another origin is likely healthy, so fall back rather than retry in place.
 //   CSV8/CSV9 - node is not the primary; another origin may be, so fall back.
-const TRANSIENT_SIGNIN_ERROR_CODES = new Set(["HDR2", "SRV14", "CSV8", "CSV9"]);
+const TRANSIENT_SIGNIN_ERROR_CODES = new Set(["SRV14", "CSV8", "CSV9"]);
 
 // A misdirected (421) result that survived redirect-following and origin fallback means
 // no reachable server is primary right now (typically mid-election); wait and retry.
@@ -55,21 +55,37 @@ const PRIMARY_SELECTION_WAIT_MS = 2000;
 
 // Result of attempting a single request against a single origin.
 //   Response          - reached the server and got an HTTP response
-//   ApiErrorResponse  - reached the server but signin returned an error (e.g. 401);
-//                       distinct from a Response so callers don't retry on other origins
-//   null              - could not reach the server (network/connection failure)
-type TryResult = Response | ApiErrorResponse | null;
+//   ApiErrorResponse  - an error that every origin would give, e.g. signin rejected (401) or an invalid TLS
+//                       configuration (HDR3); distinct from a Response so callers don't retry on other origins
+//   OriginFailure     - could not use the server (e.g. a connection failure), and why
+type OriginFailure = { failure: string };
+type TryResult = Response | ApiErrorResponse | OriginFailure;
+type SignInResult = ApiResponse<SignInResponse> | OriginFailure;
 
-function isApiErrResp(value: TryResult): value is ApiErrorResponse {
-    return value !== null && "err" in value;
+function isApiErrResp(value: TryResult | SignInResult): value is ApiErrorResponse {
+    return "err" in value;
 }
 
-// Surface transient signin errors as null so tryApiReq's caller falls back to other origins.
+function isOriginFailure(value: TryResult | SignInResult): value is OriginFailure {
+    return "failure" in value;
+}
+
+// Surface transient signin errors as OriginFailure so tryApiReq's caller falls back to other origins.
 // Any other err response was returned by the server itself (e.g. 401 "Invalid credential
 // supplied") and must be propagated, since fallback origins would reject the same credentials
 // the same way.
-function tokenErrToResult(tokenResp: ApiErrorResponse): ApiErrorResponse | null {
-    return TRANSIENT_SIGNIN_ERROR_CODES.has(tokenResp.err.code) ? null : tokenResp;
+function tokenErrToResult(tokenResp: ApiErrorResponse, origin: string): ApiErrorResponse | OriginFailure {
+    const { code, message } = tokenResp.err;
+    if (TRANSIENT_SIGNIN_ERROR_CODES.has(code))
+        return { failure: `Server at ${origin} failed signin with [${code}] ${message}` };
+    else
+        return tokenResp;
+}
+
+function errorMessage(error: unknown): string {
+    const reason = (error as { cause?: unknown })?.cause ?? error;
+    const { message, code } = (reason ?? {}) as { message?: string, code?: string };
+    return (message || code || String(reason)).trim();
 }
 
 export * from "./analyze";
@@ -85,9 +101,11 @@ export class TypeDBHttpDriver {
 
     private token?: string;
     private currentOrigin: string;
+    private readonly fetch: Fetch;
 
     constructor(private params: DriverParams) {
         this.currentOrigin = remoteOrigin(params);
+        this.fetch = createFetch(params.tls, allOrigins(params));
     }
 
     getDatabases(): Promise<ApiResponse<DatabasesListResponse>> {
@@ -235,61 +253,56 @@ export class TypeDBHttpDriver {
         const triedOrigins = new Set([this.currentOrigin]);
         const initial = await this.tryApiReq(method, path, body, options);
         if (isApiErrResp(initial)) return initial;
-        let result: Response | null = initial;
-        if (result !== null && result.status === HTTP_MISDIRECTED) {
+        let result: Response | OriginFailure = initial;
+        if (!isOriginFailure(result) && result.status === HTTP_MISDIRECTED) {
             const redirected = await this.followMisdirected(result, method, path, body, options);
             if (isApiErrResp(redirected)) return redirected;
             result = redirected;
         }
-        if (result === null || !result.ok) {
-            const startOrigin = this.currentOrigin;
-            triedOrigins.add(startOrigin);
-            const fallback = await this.tryFallbackOrigins(method, path, body, options, triedOrigins);
+        if (isOriginFailure(result) || !result.ok) {
+            const fallback = await this.tryFallbackOrigins(method, path, body, options, triedOrigins, result);
             if (isApiErrResp(fallback)) return fallback;
-            if (fallback !== null && (result === null || fallback.ok)) {
-                result = fallback;
-            } else if (result !== null) {
-                // We're returning result from startOrigin, not a fallback. tryFallbackOrigins may
-                // have shifted currentOrigin while iterating; restore so the next request goes
-                // back to the same server that produced this response. Skipped when result is
-                // null (startOrigin was unreachable) so we don't re-pin the driver to a dead
-                // server — the responsive fallback we landed on is a better next-attempt target.
-                this.switchOrigin(startOrigin);
-            }
+            result = fallback;
         }
-        return result ?? driverError("HDR1", "Cannot connect to any server");
+        if (isOriginFailure(result)) {
+            return driverError("HDR1", `Cannot connect to any server (last error: ${result.failure})`);
+        }
+        return result;
     }
 
     private async tryApiReq<BODY>(method: string, path: string, body?: BODY, options?: { headers?: Record<string, string> }): Promise<TryResult> {
-        const url = `${this.currentOrigin}${path}`;
+        const origin = this.currentOrigin;
         let tokenResp = await this.getToken();
-        if ("err" in tokenResp) return tokenErrToResult(tokenResp);
+        if (isOriginFailure(tokenResp)) return tokenResp;
+        if (isApiErrResp(tokenResp)) return tokenErrToResult(tokenResp, origin);
         const bodyString = body !== undefined ? stringifyJson(body) : undefined;
         let headers = this.authHeaders(tokenResp.ok.token, options);
-        let resp: Response;
-        try {
-            resp = await fetch(url, { method, body: bodyString, headers });
-        } catch {
-            return null;
-        }
-        if (resp.status === HTTP_UNAUTHORIZED) {
+        let resp = await this.fetchFrom(origin, path, { method, body: bodyString, headers });
+        if (!isApiErrResp(resp) && !isOriginFailure(resp) && resp.status === HTTP_UNAUTHORIZED) {
             tokenResp = await this.refreshToken();
-            if ("err" in tokenResp) return tokenErrToResult(tokenResp);
+            if (isOriginFailure(tokenResp)) return tokenResp;
+            if (isApiErrResp(tokenResp)) return tokenErrToResult(tokenResp, origin);
             headers = this.authHeaders(tokenResp.ok.token, options);
-            try {
-                resp = await fetch(url, { method, body: bodyString, headers });
-            } catch {
-                return null;
-            }
+            resp = await this.fetchFrom(origin, path, { method, body: bodyString, headers });
         }
         return resp;
     }
 
+    private async fetchFrom(origin: string, path: string, init: FetchInit): Promise<TryResult> {
+        try {
+            return await this.fetch(`${origin}${path}`, init);
+        } catch (error) {
+            if (error instanceof TlsConfigError) return driverError("HDR3", error.message);
+            return { failure: `Cannot connect to server at ${origin}: ${errorMessage(error)}` };
+        }
+    }
+
     private async followMisdirected<BODY>(resp: Response, method: string, path: string, body?: BODY, options?: { headers?: Record<string, string> }): Promise<TryResult> {
+        const origin = this.currentOrigin;
         if (await this.switchToRedirectTarget(resp)) {
             return await this.tryApiReq(method, path, body, options);
         }
-        return null;
+        return { failure: `Server at ${origin} returned 421 Misdirected Request without another primary address` };
     }
 
     private async switchToRedirectTarget(resp: Response): Promise<boolean> {
@@ -306,26 +319,42 @@ export class TypeDBHttpDriver {
         return true;
     }
 
-    private async tryFallbackOrigins<BODY>(method: string, path: string, body: BODY | undefined, options: { headers?: Record<string, string> } | undefined, triedOrigins: Set<string>): Promise<TryResult> {
+    private async tryFallbackOrigins<BODY>(method: string, path: string, body: BODY | undefined, options: { headers?: Record<string, string> } | undefined, triedOrigins: Set<string>, startResult: Response | OriginFailure): Promise<TryResult> {
+        const startOrigin = this.currentOrigin;
+        triedOrigins.add(startOrigin);
         const origins = allOrigins(this.params);
         let lastError: Response | null = null;
+        let lastFailure: OriginFailure | null = null;
         for (const origin of origins) {
             if (triedOrigins.has(origin)) continue;
             this.switchOrigin(origin);
             const initial = await this.tryApiReq(method, path, body, options);
-            if (initial === null) continue;
+            if (isOriginFailure(initial)) {
+                lastFailure = initial;
+                continue;
+            }
             if (isApiErrResp(initial)) return initial;
             let result: Response = initial;
             if (result.status === HTTP_MISDIRECTED) {
                 const redirected = await this.followMisdirected(result, method, path, body, options);
-                if (redirected === null) continue;
+                if (isOriginFailure(redirected)) {
+                    lastFailure = redirected;
+                    continue;
+                }
                 if (isApiErrResp(redirected)) return redirected;
                 result = redirected;
             }
             if (result.ok) return result;
             lastError = result;
         }
-        return lastError;
+        if (!isOriginFailure(startResult)) {
+            // We're returning the response from startOrigin, not a fallback. Iterating may have shifted
+            // currentOrigin, and it's better to restore it so the next request goes back to the same server that
+            // produced this response
+            this.switchOrigin(startOrigin);
+            return startResult;
+        }
+        return lastError ?? lastFailure ?? startResult;
     }
 
     private switchOrigin(origin: string): void {
@@ -337,33 +366,28 @@ export class TypeDBHttpDriver {
         return { "Authorization": `Bearer ${token}`, "Content-Type": "application/json", ...options?.headers };
     }
 
-    private getToken(): Promise<ApiResponse<SignInResponse>> {
+    private getToken(): Promise<SignInResult> {
         if (this.token) {
-            const resp: ApiResponse<SignInResponse> = { ok: { token: this.token } };
+            const resp: SignInResult = { ok: { token: this.token } };
             return Promise.resolve(resp);
         } else return this.refreshToken();
     }
 
-    private async refreshToken(): Promise<ApiResponse<SignInResponse>> {
+    private async refreshToken(): Promise<SignInResult> {
         return this.signinOnce();
     }
 
-    private async signinOnce(): Promise<ApiResponse<SignInResponse>> {
-        const url = `${this.currentOrigin}/v1/signin`;
+    private async signinOnce(): Promise<SignInResult> {
         const body = { username: this.params.username, password: this.params.password };
-        let resp: Response;
-        try {
-            resp = await fetch(url, { method: "POST", body: stringifyJson(body), headers: { "Content-Type": "application/json" } });
-        } catch {
-            return driverError("HDR2", `Cannot connect to server at ${this.currentOrigin}`);
-        }
+        const resp = await this.fetchFrom(this.currentOrigin, "/v1/signin", { method: "POST", body: stringifyJson(body), headers: { "Content-Type": "application/json" } });
+        if (isApiErrResp(resp) || isOriginFailure(resp)) return resp;
         const json = await this.jsonOrNull(resp);
         if (resp.ok && typeof json?.token === "string") {
             this.token = json.token;
             return { ok: json };
         }
         if (isApiError(json)) return { err: json, status: resp.status };
-        return driverError("HDR2", `Unexpected signin response from ${this.currentOrigin} (HTTP ${resp.status})`);
+        return { failure: `Unexpected signin response from ${this.currentOrigin} (HTTP ${resp.status})` };
     }
 
     private async jsonOrNull(resp: Response): Promise<any> {

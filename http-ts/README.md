@@ -45,3 +45,16 @@ if (answer.answerType === "conceptRows") {
     })
 }
 ```
+
+To connect over TLS to a server whose certificate is signed by a private CA, pass the CA certificate file in Node.js:
+
+```ts
+const driver = new TypeDBHttpDriver({
+    username: "admin",
+    password: "password",
+    addresses: [ "https://typedb.example.com:8000" ],
+    tls: { rootCAPath: "ca.pem" },
+});
+```
+
+With a root CA, every address must use `https`. In browsers, add the CA to the operating system's or the browser's trust store instead.

@@ -13,6 +13,7 @@
 |Name |Type |Description
 a| `addresses` a| `string` a| 
 a| `password` a| `string` a| 
+a| `tls` a| `DriverTlsConfig` a| 
 a| `username` a| `string` a| 
 |===
 // end::properties[]
