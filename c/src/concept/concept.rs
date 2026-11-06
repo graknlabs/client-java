@@ -19,9 +19,7 @@
 
 use std::{ffi::c_char, ptr::null_mut, str::FromStr};
 
-use chrono::{
-    DateTime, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, TimeZone as ChronoTimeZone,
-};
+use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, TimeZone as ChronoTimeZone};
 use typedb_driver::{
     box_stream,
     concept::{
@@ -34,8 +32,8 @@ use crate::common::{
     error::try_release,
     iterator::CIterator,
     memory::{
-        borrow, borrow_mut, free, release, release_optional, release_optional_string,
-        release_string, string_free, string_view, take_ownership,
+        borrow, borrow_mut, free, release, release_optional, release_optional_string, release_string, string_free,
+        string_view, take_ownership,
     },
 };
 
@@ -52,10 +50,7 @@ pub struct DatetimeInNanos {
 
 impl DatetimeInNanos {
     pub fn new<TZ: ChronoTimeZone>(datetime: &DateTime<TZ>) -> Self {
-        Self {
-            seconds: datetime.timestamp(),
-            subsec_nanos: datetime.timestamp_subsec_nanos(),
-        }
+        Self { seconds: datetime.timestamp(), subsec_nanos: datetime.timestamp_subsec_nanos() }
     }
 }
 
@@ -109,9 +104,7 @@ pub struct StringAndOptValueIterator(pub CIterator<StringAndOptValue>);
 /// Forwards the <code>StringAndOptValueIterator</code> and returns the next <code>StringAndOptValue</code> if it exists,
 /// or null if there are no more elements.
 #[unsafe(no_mangle)]
-pub extern "C" fn string_and_opt_value_iterator_next(
-    it: *mut StringAndOptValueIterator,
-) -> *mut StringAndOptValue {
+pub extern "C" fn string_and_opt_value_iterator_next(it: *mut StringAndOptValueIterator) -> *mut StringAndOptValue {
     release_optional(borrow_mut(it).0.0.next())
 }
 
@@ -133,10 +126,7 @@ pub struct StringAndOptValue {
 
 impl From<(String, Option<Value>)> for StringAndOptValue {
     fn from((field_name, value): (String, Option<Value>)) -> Self {
-        Self {
-            string: release_string(field_name),
-            value: release_optional(value.map(Concept::Value)),
-        }
+        Self { string: release_string(field_name), value: release_optional(value.map(Concept::Value)) }
     }
 }
 
@@ -186,11 +176,7 @@ pub extern "C" fn concept_try_get_label(concept: *const Concept) -> *mut c_char 
 /// Otherwise, returns null.
 #[unsafe(no_mangle)]
 pub extern "C" fn concept_try_get_value_type(concept: *const Concept) -> *mut c_char {
-    release_optional_string(
-        borrow(concept)
-            .try_get_value_label()
-            .map(|str| str.to_owned()),
-    )
+    release_optional_string(borrow(concept).try_get_value_label().map(|str| str.to_owned()))
 }
 
 /// Retrieves the value of this <code>Concept</code>, if it exists.
@@ -199,11 +185,7 @@ pub extern "C" fn concept_try_get_value_type(concept: *const Concept) -> *mut c_
 /// Otherwise, returns null.
 #[unsafe(no_mangle)]
 pub extern "C" fn concept_try_get_value(concept: *const Concept) -> *mut Concept {
-    release_optional(
-        borrow(concept)
-            .try_get_value()
-            .map(|value| Concept::Value(value.clone())),
-    )
+    release_optional(borrow(concept).try_get_value().map(|value| Concept::Value(value.clone())))
 }
 
 /// Returns <code>true</code> if the value which this <code>Concept</code> holds is of type <code>boolean</code>.
@@ -282,10 +264,7 @@ pub extern "C" fn concept_is_struct(concept: *const Concept) -> bool {
 pub extern "C" fn concept_get_boolean(concept: *const Concept) -> bool {
     match borrow(concept).try_get_boolean() {
         Some(value) => value,
-        None => unreachable!(
-            "Attempting to unwrap a non-boolean {:?} as boolean",
-            borrow(concept)
-        ),
+        None => unreachable!("Attempting to unwrap a non-boolean {:?} as boolean", borrow(concept)),
     }
 }
 
@@ -295,10 +274,7 @@ pub extern "C" fn concept_get_boolean(concept: *const Concept) -> bool {
 pub extern "C" fn concept_get_integer(concept: *const Concept) -> i64 {
     match borrow(concept).try_get_integer() {
         Some(value) => value,
-        None => unreachable!(
-            "Attempting to unwrap a non-integer {:?} as integer",
-            borrow(concept)
-        ),
+        None => unreachable!("Attempting to unwrap a non-integer {:?} as integer", borrow(concept)),
     }
 }
 
@@ -308,10 +284,7 @@ pub extern "C" fn concept_get_integer(concept: *const Concept) -> i64 {
 pub extern "C" fn concept_get_double(concept: *const Concept) -> f64 {
     match borrow(concept).try_get_double() {
         Some(value) => value,
-        None => unreachable!(
-            "Attempting to unwrap a non-double {:?} as double",
-            borrow(concept)
-        ),
+        None => unreachable!("Attempting to unwrap a non-double {:?} as double", borrow(concept)),
     }
 }
 
@@ -321,10 +294,7 @@ pub extern "C" fn concept_get_double(concept: *const Concept) -> f64 {
 pub extern "C" fn concept_get_decimal(concept: *const Concept) -> Decimal {
     match borrow(concept).try_get_decimal() {
         Some(value) => value,
-        None => unreachable!(
-            "Attempting to unwrap a non-decimal {:?} as decimal",
-            borrow(concept)
-        ),
+        None => unreachable!("Attempting to unwrap a non-decimal {:?} as decimal", borrow(concept)),
     }
 }
 
@@ -334,10 +304,7 @@ pub extern "C" fn concept_get_decimal(concept: *const Concept) -> Decimal {
 pub extern "C" fn concept_get_string(concept: *const Concept) -> *mut c_char {
     match borrow(concept).try_get_string() {
         Some(value) => release_string(value.to_owned()),
-        None => unreachable!(
-            "Attempting to unwrap a non-string {:?} as string",
-            borrow(concept)
-        ),
+        None => unreachable!("Attempting to unwrap a non-string {:?} as string", borrow(concept)),
     }
 }
 
@@ -347,10 +314,7 @@ pub extern "C" fn concept_get_string(concept: *const Concept) -> *mut c_char {
 pub extern "C" fn concept_get_date_as_seconds(concept: *const Concept) -> i64 {
     match borrow(concept).try_get_date() {
         Some(value) => value.and_time(NaiveTime::MIN).and_utc().timestamp(),
-        None => unreachable!(
-            "Attempting to unwrap a non-date {:?} as date",
-            borrow(concept)
-        ),
+        None => unreachable!("Attempting to unwrap a non-date {:?} as date", borrow(concept)),
     }
 }
 
@@ -360,10 +324,7 @@ pub extern "C" fn concept_get_date_as_seconds(concept: *const Concept) -> i64 {
 pub extern "C" fn concept_get_datetime(concept: *const Concept) -> DatetimeInNanos {
     match borrow(concept).try_get_datetime() {
         Some(value) => DatetimeInNanos::new(&value.and_utc()),
-        None => unreachable!(
-            "Attempting to unwrap a non-datetime {:?} as datetime",
-            borrow(concept)
-        ),
+        None => unreachable!("Attempting to unwrap a non-datetime {:?} as datetime", borrow(concept)),
     }
 }
 
@@ -373,10 +334,7 @@ pub extern "C" fn concept_get_datetime(concept: *const Concept) -> DatetimeInNan
 pub extern "C" fn concept_get_datetime_tz(concept: *const Concept) -> *mut DatetimeAndTimeZone {
     match borrow(concept).try_get_datetime_tz() {
         Some(value) => release(DatetimeAndTimeZone::new(&value)),
-        None => unreachable!(
-            "Attempting to unwrap a non-datetime-tz {:?} as datetime-tz",
-            borrow(concept)
-        ),
+        None => unreachable!("Attempting to unwrap a non-datetime-tz {:?} as datetime-tz", borrow(concept)),
     }
 }
 
@@ -386,10 +344,7 @@ pub extern "C" fn concept_get_datetime_tz(concept: *const Concept) -> *mut Datet
 pub extern "C" fn concept_get_duration(concept: *const Concept) -> Duration {
     match borrow(concept).try_get_duration() {
         Some(value) => value,
-        None => unreachable!(
-            "Attempting to unwrap a non-duration {:?} as duration",
-            borrow(concept)
-        ),
+        None => unreachable!("Attempting to unwrap a non-duration {:?} as duration", borrow(concept)),
     }
 }
 
@@ -401,10 +356,7 @@ pub extern "C" fn concept_get_struct(concept: *const Concept) -> *mut StringAndO
         Some(value) => release(StringAndOptValueIterator(CIterator(box_stream(
             value.fields().clone().into_iter().map(|pair| pair.into()),
         )))),
-        None => unreachable!(
-            "Attempting to unwrap a non-struct {:?} as struct",
-            borrow(concept)
-        ),
+        None => unreachable!("Attempting to unwrap a non-struct {:?} as struct", borrow(concept)),
     }
 }
 
@@ -502,8 +454,7 @@ pub extern "C" fn concept_new_double(value: f64) -> *mut Concept {
 /// provided as a string (without the dec suffix).
 #[unsafe(no_mangle)]
 pub extern "C" fn concept_new_decimal_from_string(str: *const c_char) -> *mut Concept {
-    let result =
-        Decimal::from_str(string_view(str)).map(|value| Concept::Value(Value::Decimal(value)));
+    let result = Decimal::from_str(string_view(str)).map(|value| Concept::Value(Value::Decimal(value)));
     try_release(result)
 }
 
@@ -511,18 +462,14 @@ pub extern "C" fn concept_new_decimal_from_string(str: *const c_char) -> *mut Co
 /// provided as its integer and fractional parts. The fractional part is in units of 10^-19.
 #[unsafe(no_mangle)]
 pub extern "C" fn concept_new_decimal(integer: i64, fractional: u64) -> *mut Concept {
-    release(Concept::Value(Value::Decimal(Decimal::from_parts(
-        integer, fractional,
-    ))))
+    release(Concept::Value(Value::Decimal(Decimal::from_parts(integer, fractional))))
 }
 
 /// Creates a new <code>Concept</code> object wrapping a specified <code>NaiveDate</code> value.
 /// The value must be seconds since the start of the UNIX epoch.
 #[unsafe(no_mangle)]
 pub extern "C" fn concept_new_date_from_seconds(seconds_since_epoch: i64) -> *mut Concept {
-    let naive_date = DateTime::from_timestamp(seconds_since_epoch, 0)
-        .unwrap()
-        .date_naive();
+    let naive_date = DateTime::from_timestamp(seconds_since_epoch, 0).unwrap().date_naive();
     release(Concept::Value(Value::Date(naive_date)))
 }
 
@@ -530,9 +477,7 @@ pub extern "C" fn concept_new_date_from_seconds(seconds_since_epoch: i64) -> *mu
 /// provided as seconds and nanoseconds since the Unix epoch.
 #[unsafe(no_mangle)]
 pub extern "C" fn concept_new_datetime(seconds: i64, subsec_nanos: u32) -> *mut Concept {
-    let naive_datetime = DateTime::from_timestamp(seconds, subsec_nanos)
-        .unwrap()
-        .naive_utc();
+    let naive_datetime = DateTime::from_timestamp(seconds, subsec_nanos).unwrap().naive_utc();
     release(Concept::Value(Value::Datetime(naive_datetime)))
 }
 
@@ -544,39 +489,25 @@ pub extern "C" fn concept_new_datetime_tz_iana(
     subsec_nanos: u32,
     zone_name: *const c_char,
 ) -> *mut Concept {
-    let naive_datetime = DateTime::from_timestamp(seconds, subsec_nanos)
-        .unwrap()
-        .naive_utc();
+    let naive_datetime = DateTime::from_timestamp(seconds, subsec_nanos).unwrap().naive_utc();
     let tz = chrono_tz::Tz::from_str_insensitive(string_view(zone_name)).expect("Invalid timezone");
-    release(Concept::Value(Value::DatetimeTZ(
-        TimeZone::IANA(tz).from_utc_datetime(&naive_datetime),
-    )))
+    release(Concept::Value(Value::DatetimeTZ(TimeZone::IANA(tz).from_utc_datetime(&naive_datetime))))
 }
 
 /// Creates a new <code>Concept</code> object wrapping the specified timezone-aware datetime value
 /// with a fixed UTC offset in seconds, provided as seconds and nanoseconds since the Unix epoch.
 #[unsafe(no_mangle)]
-pub extern "C" fn concept_new_datetime_tz_offset(
-    seconds: i64,
-    subsec_nanos: u32,
-    offset_seconds: i32,
-) -> *mut Concept {
-    let naive_datetime = DateTime::from_timestamp(seconds, subsec_nanos)
-        .unwrap()
-        .naive_utc();
+pub extern "C" fn concept_new_datetime_tz_offset(seconds: i64, subsec_nanos: u32, offset_seconds: i32) -> *mut Concept {
+    let naive_datetime = DateTime::from_timestamp(seconds, subsec_nanos).unwrap().naive_utc();
     let offset = FixedOffset::east_opt(offset_seconds).expect("Invalid offset");
-    release(Concept::Value(Value::DatetimeTZ(
-        TimeZone::Fixed(offset).from_utc_datetime(&naive_datetime),
-    )))
+    release(Concept::Value(Value::DatetimeTZ(TimeZone::Fixed(offset).from_utc_datetime(&naive_datetime))))
 }
 
 /// Creates a new <code>Concept</code> object wrapping the specified <code>Duration</code> value,
 /// provided as its months, days, and nanoseconds components.
 #[unsafe(no_mangle)]
 pub extern "C" fn concept_new_duration(months: u32, days: u32, nanos: u64) -> *mut Concept {
-    release(Concept::Value(Value::Duration(Duration::new(
-        months, days, nanos,
-    ))))
+    release(Concept::Value(Value::Duration(Duration::new(months, days, nanos))))
 }
 
 pub(super) fn borrow_as_entity(concept: *const Concept) -> &'static Entity {

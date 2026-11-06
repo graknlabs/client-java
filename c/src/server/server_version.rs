@@ -33,19 +33,13 @@ pub struct ServerVersion {
 
 impl ServerVersion {
     pub fn new(distribution: String, version: String) -> Self {
-        Self {
-            distribution: release_string(distribution),
-            version: release_string(version),
-        }
+        Self { distribution: release_string(distribution), version: release_string(version) }
     }
 }
 
 impl Default for ServerVersion {
     fn default() -> Self {
-        Self {
-            distribution: null_mut(),
-            version: null_mut(),
-        }
+        Self { distribution: null_mut(), version: null_mut() }
     }
 }
 

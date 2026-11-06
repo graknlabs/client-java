@@ -56,15 +56,11 @@ pub(crate) fn try_release_optional<T>(result: Option<Result<T>>) -> *mut T {
 }
 
 pub(crate) fn try_release_string(result: Result<String>) -> *mut c_char {
-    ok_record(result)
-        .map(release_string)
-        .unwrap_or_else(null_mut)
+    ok_record(result).map(release_string).unwrap_or_else(null_mut)
 }
 
 pub(crate) fn try_release_optional_string(result: Option<Result<String>>) -> *mut c_char {
-    ok_record_flatten(result)
-        .map(release_string)
-        .unwrap_or_else(null_mut)
+    ok_record_flatten(result).map(release_string).unwrap_or_else(null_mut)
 }
 
 pub(crate) fn try_release_arc<T>(result: Result<Arc<T>>) -> *const T {

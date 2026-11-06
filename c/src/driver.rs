@@ -38,11 +38,7 @@ use crate::{
 const DRIVER_LANG: &str = "c";
 
 fn driver_lang_or_default(driver_lang: *const c_char) -> &'static str {
-    if driver_lang.is_null() {
-        DRIVER_LANG
-    } else {
-        string_view(driver_lang)
-    }
+    if driver_lang.is_null() { DRIVER_LANG } else { string_view(driver_lang) }
 }
 
 /// Open a TypeDB Driver to a TypeDB server available at the provided address.
@@ -82,9 +78,7 @@ pub extern "C" fn driver_new_with_addresses(
     driver_lang: *const c_char,
 ) -> *mut TypeDBDriver {
     try_release(TypeDBDriver::new_with_description(
-        unwrap_or_default(Addresses::try_from_addresses_str(string_array_view(
-            addresses,
-        ))),
+        unwrap_or_default(Addresses::try_from_addresses_str(string_array_view(addresses))),
         borrow(credentials).clone(),
         borrow(driver_options).clone(),
         driver_lang_or_default(driver_lang),
@@ -108,10 +102,7 @@ pub extern "C" fn driver_new_with_address_translation(
     driver_options: *const DriverOptions,
     driver_lang: *const c_char,
 ) -> *mut TypeDBDriver {
-    let addresses = iterators_to_map(
-        string_array_view(public_addresses),
-        string_array_view(private_addresses),
-    );
+    let addresses = iterators_to_map(string_array_view(public_addresses), string_array_view(private_addresses));
     try_release(TypeDBDriver::new_with_description(
         unwrap_or_default(Addresses::try_from_translation_str(addresses)),
         borrow(credentials).clone(),
@@ -160,10 +151,7 @@ pub extern "C" fn driver_server_version(
         None => driver.server_version(),
     };
     release(unwrap_or_default(result.map(|server_version| {
-        ServerVersion::new(
-            server_version.distribution().to_string(),
-            server_version.version().to_string(),
-        )
+        ServerVersion::new(server_version.distribution().to_string(), server_version.version().to_string())
     })))
 }
 
@@ -181,9 +169,7 @@ pub extern "C" fn driver_servers(
         Some(routing) => driver.servers_with_routing(routing),
         None => driver.servers(),
     };
-    release(ServerIterator(CIterator(box_stream(
-        unwrap_or_default(result).into_iter(),
-    ))))
+    release(ServerIterator(CIterator(box_stream(unwrap_or_default(result).into_iter()))))
 }
 
 /// Retrieves the server's primary server, if exists.
@@ -200,9 +186,5 @@ pub extern "C" fn driver_primary_server(
         Some(routing) => driver.primary_server_with_routing(routing),
         None => driver.primary_server(),
     };
-    try_release_optional(
-        result
-            .map(|res| res.map(|rep| Server::Available(rep)))
-            .transpose(),
-    )
+    try_release_optional(result.map(|res| res.map(|rep| Server::Available(rep))).transpose())
 }

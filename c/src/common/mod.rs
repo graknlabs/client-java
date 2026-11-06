@@ -38,12 +38,7 @@ pub struct StringIterator(pub CIterator<Result<String>>);
 /// or null if there are no more elements.
 #[unsafe(no_mangle)]
 pub extern "C" fn string_iterator_next(it: *mut StringIterator) -> *mut c_char {
-    borrow_mut(it)
-        .0
-        .0
-        .next()
-        .map(try_release_string)
-        .unwrap_or_else(null_mut)
+    borrow_mut(it).0.0.next().map(try_release_string).unwrap_or_else(null_mut)
 }
 
 /// Frees the native rust <code>StringIterator</code> object

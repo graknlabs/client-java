@@ -57,11 +57,7 @@ pub extern "C" fn server_get_id(server_info: *const Server) -> i64 {
 /// Returns the address this server is hosted at.
 #[unsafe(no_mangle)]
 pub extern "C" fn server_get_address(server_info: *const Server) -> *mut c_char {
-    release_optional_string(
-        borrow(server_info)
-            .address()
-            .map(|address| address.to_string()),
-    )
+    release_optional_string(borrow(server_info).address().map(|address| address.to_string()))
 }
 
 /// Returns whether the role of this server is set.

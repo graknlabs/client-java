@@ -48,17 +48,13 @@ pub extern "C" fn transaction_options_set_transaction_timeout_millis(
 /// Returns the value set for the transaction timeout in this <code>TransactionOptions</code> object.
 /// If set, specifies a timeout for killing transactions automatically, preventing memory leaks in unclosed transactions.
 #[unsafe(no_mangle)]
-pub extern "C" fn transaction_options_get_transaction_timeout_millis(
-    options: *const TransactionOptions,
-) -> i64 {
+pub extern "C" fn transaction_options_get_transaction_timeout_millis(options: *const TransactionOptions) -> i64 {
     borrow(options).transaction_timeout.unwrap().as_millis() as i64
 }
 
 /// Checks whether the option for transaction timeout was explicitly set for this <code>TransactionOptions</code> object.
 #[unsafe(no_mangle)]
-pub extern "C" fn transaction_options_has_transaction_timeout_millis(
-    options: *const TransactionOptions,
-) -> bool {
+pub extern "C" fn transaction_options_has_transaction_timeout_millis(options: *const TransactionOptions) -> bool {
     borrow(options).transaction_timeout.is_some()
 }
 
@@ -69,8 +65,7 @@ pub extern "C" fn transaction_options_set_schema_lock_acquire_timeout_millis(
     options: *mut TransactionOptions,
     timeout_millis: i64,
 ) {
-    borrow_mut(options).schema_lock_acquire_timeout =
-        Some(Duration::from_millis(timeout_millis as u64));
+    borrow_mut(options).schema_lock_acquire_timeout = Some(Duration::from_millis(timeout_millis as u64));
 }
 
 /// Returns the value set for the schema lock acquire timeout in this <code>TransactionOptions</code> object.
@@ -79,10 +74,7 @@ pub extern "C" fn transaction_options_set_schema_lock_acquire_timeout_millis(
 pub extern "C" fn transaction_options_get_schema_lock_acquire_timeout_millis(
     options: *const TransactionOptions,
 ) -> i64 {
-    borrow(options)
-        .schema_lock_acquire_timeout
-        .unwrap()
-        .as_millis() as i64
+    borrow(options).schema_lock_acquire_timeout.unwrap().as_millis() as i64
 }
 
 /// Checks whether the option for schema lock acquire timeout was explicitly set for this <code>TransactionOptions</code> object.

@@ -39,19 +39,14 @@ pub extern "C" fn driver_options_drop(driver_options: *mut DriverOptions) {
 /// Overrides the TLS configuration on <code>DriverOptions</code>.
 /// WARNING: Disabled TLS settings will make the driver sending passwords as plaintext.
 #[unsafe(no_mangle)]
-pub extern "C" fn driver_options_set_tls_config(
-    options: *mut DriverOptions,
-    tls_config: *const DriverTlsConfig,
-) {
+pub extern "C" fn driver_options_set_tls_config(options: *mut DriverOptions, tls_config: *const DriverTlsConfig) {
     borrow_mut(options).tls_config = borrow(tls_config).clone();
 }
 
 /// Returns the TLS Config set for this <code>DriverOptions</code> object.
 /// Specifies the TLS configuration of the connection to TypeDB.
 #[unsafe(no_mangle)]
-pub extern "C" fn driver_options_get_tls_config(
-    options: *const DriverOptions,
-) -> *mut DriverTlsConfig {
+pub extern "C" fn driver_options_get_tls_config(options: *const DriverOptions) -> *mut DriverTlsConfig {
     release(borrow(options).tls_config.clone())
 }
 
@@ -75,9 +70,7 @@ pub extern "C" fn driver_options_set_primary_failover_retries(
 /// known replicas with a 2-second sleep between polls (slow path).
 /// Set to 0 to disable failover. Defaults to 1.
 #[unsafe(no_mangle)]
-pub extern "C" fn driver_options_get_primary_failover_retries(
-    options: *const DriverOptions,
-) -> i64 {
+pub extern "C" fn driver_options_get_primary_failover_retries(options: *const DriverOptions) -> i64 {
     borrow(options).primary_failover_retries as i64
 }
 
@@ -87,10 +80,7 @@ pub extern "C" fn driver_options_get_primary_failover_retries(
 /// Set to 0 to disable the timeout (not recommended for production use).
 /// Defaults to 2 hours (7200000 milliseconds).
 #[unsafe(no_mangle)]
-pub extern "C" fn driver_options_set_request_timeout_millis(
-    options: *mut DriverOptions,
-    timeout_millis: i64,
-) {
+pub extern "C" fn driver_options_set_request_timeout_millis(options: *mut DriverOptions, timeout_millis: i64) {
     borrow_mut(options).request_timeout = Duration::from_millis(timeout_millis as u64);
 }
 

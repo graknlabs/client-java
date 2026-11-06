@@ -48,12 +48,7 @@ pub extern "C" fn database_iterator_drop(it: *mut DatabaseIterator) {
 /// @param driver The <code>TypeDBDriver</code> object.
 #[unsafe(no_mangle)]
 pub extern "C" fn databases_all(driver: *mut TypeDBDriver) -> *mut DatabaseIterator {
-    try_release(
-        borrow(driver)
-            .databases()
-            .all()
-            .map(|dbs| DatabaseIterator(CIterator(box_stream(dbs.into_iter())))),
-    )
+    try_release(borrow(driver).databases().all().map(|dbs| DatabaseIterator(CIterator(box_stream(dbs.into_iter())))))
 }
 
 /// Checks if a database with the given name exists.
@@ -100,9 +95,5 @@ pub extern "C" fn databases_import_from_file(
     data_file: *const c_char,
 ) {
     let data_file_path = Path::new(string_view(data_file));
-    unwrap_void(borrow(driver).databases().import_from_file(
-        string_view(name),
-        string_view(schema),
-        data_file_path,
-    ))
+    unwrap_void(borrow(driver).databases().import_from_file(string_view(name), string_view(schema), data_file_path))
 }

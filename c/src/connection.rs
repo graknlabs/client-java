@@ -94,14 +94,8 @@ pub extern "C" fn driver_force_close(driver: *mut TypeDBDriver) {
 // @param username The name of the user to connect as
 // @param password The password for the user
 #[unsafe(no_mangle)]
-pub extern "C" fn credentials_new(
-    username: *const c_char,
-    password: *const c_char,
-) -> *mut Credentials {
-    release(Credentials::new(
-        string_view(username),
-        string_view(password),
-    ))
+pub extern "C" fn credentials_new(username: *const c_char, password: *const c_char) -> *mut Credentials {
+    release(Credentials::new(string_view(username), string_view(password)))
 }
 
 // Frees the native rust <code>Credentials</code> object
@@ -115,10 +109,7 @@ pub extern "C" fn credentials_drop(credentials: *mut Credentials) {
 // @param tls_root_ca Path to the CA certificate to use for authenticating server certificates.
 // @param with_tls Specify whether the connection to TypeDB Cloud must be done over TLS
 #[unsafe(no_mangle)]
-pub extern "C" fn driver_options_new(
-    is_tls_enabled: bool,
-    tls_root_ca: *const c_char,
-) -> *mut DriverOptions {
+pub extern "C" fn driver_options_new(is_tls_enabled: bool, tls_root_ca: *const c_char) -> *mut DriverOptions {
     let tls_root_ca_path = unsafe { tls_root_ca.as_ref().map(|str| Path::new(string_view(str))) };
     try_release(DriverOptions::new(is_tls_enabled, tls_root_ca_path))
 }
