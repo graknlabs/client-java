@@ -1138,7 +1138,9 @@ pub extern "C" fn constraint_value_get_value_type(constraint: *const ConstraintW
     release_string(value_type.name().to_owned())
 }
 
-/// Unwraps the `Constraint` instance as a ``, and returns the specified variables
+/// Unwraps the <code>Constraint</code> instance as a `IsSet`
+/// and returns the specified variables.
+/// Will panic if the Constraint is not a IsSet constraint.
 #[unsafe(no_mangle)]
 pub extern "C" fn constraint_isset_get_variables(constraint: *const ConstraintWithSpan) -> *mut ConstraintVertexIterator {
     let Constraint::IsSet { variables } = &borrow(constraint).constraint else {
