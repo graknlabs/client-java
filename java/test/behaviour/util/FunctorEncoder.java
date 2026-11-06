@@ -225,6 +225,11 @@ public abstract class FunctorEncoder {
                             value.valueType()
                     );
                 }
+                case IsSet: {
+                    Constraint.IsSet isSet = constraint.asIsSet();
+                    Stream<String> variables = isSet.variables().map(this::encode);
+                    return makeFunctor("IsSet", encodeList(variables));
+                }
                 case Or: {
                     Constraint.Or or = constraint.asOr();
                     Stream<String> branchesEncoded = or.branches().map(conjunctionID -> {

@@ -154,6 +154,10 @@ def _encode_constraint(constraint: Constraint, encoder: FunctorEncoder) -> str:
         val = constraint.as_value()
         return encoder.make_functor("Value", val.attribute_type(), val.value_type())
 
+    elif constraint.is_isset():
+        is_set = constraint.as_isset()
+        return encoder.make_functor("IsSet", is_set.variables())
+
     elif constraint.is_or():
         or_ = constraint.as_or()
         return encoder.make_functor("Or", or_.branches())

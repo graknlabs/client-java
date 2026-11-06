@@ -273,6 +273,11 @@ namespace TypeDB.Driver.Test.Behaviour
                     var value = constraint.AsValue();
                     return MakeFunctor("Value", Encode(value.AttributeType), value.ValueType);
                 }
+                else if (constraint.IsIsSet)
+                {
+                    var isSet = constraint.AsIsSet();
+                    return MakeFunctor("IsSet", EncodeList(isSet.Variables.Select(Encode)));
+                }
                 else if (constraint.IsOr)
                 {
                     var or = constraint.AsOr();
