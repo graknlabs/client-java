@@ -50,7 +50,7 @@ const ADDRESS_TRANSLATION_SEPARATOR: char = ';';
 /// connection. Each address may instead be a `public;private` pair, which produces
 /// [`Addresses::Translated`]; pairs cannot be mixed with plain addresses.
 ///
-/// An address without a port is assumed to be on [`DEFAULT_PORT`]; an explicit port is kept as
+/// An address without a port is assumed to be on `DEFAULT_PORT`; an explicit port is kept as
 /// written. The database path segment and any query parameters are accepted and discarded: they
 /// are meaningful to connection-string producers such as TypeDB Studio, but not to the driver.
 ///
@@ -89,7 +89,7 @@ impl ConnectionString {
     }
 
     /// The addresses with every occurrence of the HTTP endpoint's default port replaced by
-    /// [`DEFAULT_PORT`], or `None` if no address carries it. A connection string produced for the
+    /// `DEFAULT_PORT`, or `None` if no address carries it. A connection string produced for the
     /// HTTP endpoint, as by TypeDB Studio, names the same server as the gRPC endpoint, so a driver
     /// whose connection to the written port is answered with HTTP rather than gRPC retries here.
     pub fn fallback_addresses(&self) -> Option<Addresses> {

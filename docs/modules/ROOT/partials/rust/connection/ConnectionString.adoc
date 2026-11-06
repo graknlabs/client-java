@@ -1,0 +1,109 @@
+[#_struct_ConnectionString]
+[.doc-api-reference-driver]
+=== ConnectionString
+
+`struct`
+
+*Implements traits:*
+
+* `Clone`
+* `Debug`
+* `Eq`
+* `FromStr`
+* `PartialEq`
+* `StructuralPartialEq`
+
+A parsed TypeDB connection string, bundling everything needed to open a driver into a single value: ``typedb://&lt;username&gt;:&lt;password&gt;@&lt;addresses&gt;[/&lt;database&gt;][?&lt;params&gt;]``.
+
+Addresses are comma-separated, and each one must carry an explicit ``http://`` or ``https://`` scheme; all addresses must agree on it, since one TLS configuration covers the whole connection. Each address may instead be a ``public;private`` pair, which produces <<#_enum_Addresses_variant_Translated,`Addresses::Translated`>>; pairs cannot be mixed with plain addresses.
+
+An address without a port is assumed to be on ``DEFAULT_PORT``; an explicit port is kept as written. The database path segment and any query parameters are accepted and discarded: they are meaningful to connection-string producers such as TypeDB Studio, but not to the driver.
+
+// tag::methods[]
+[#_struct_ConnectionString_addresses_]
+==== addresses
+
+[source,rust]
+----
+pub fn addresses(&self) -> &Addresses
+----
+
+Retrieves the addresses to connect to.
+
+[caption=""]
+.Returns
+[source,rust]
+----
+&Addresses
+----
+
+[#_struct_ConnectionString_fallback_addresses_]
+==== fallback_addresses
+
+[source,rust]
+----
+pub fn fallback_addresses(&self) -> Option<Addresses>
+----
+
+The addresses with every occurrence of the HTTP endpoint’s default port replaced by ``DEFAULT_PORT``, or ``None`` if no address carries it. A connection string produced for the HTTP endpoint, as by TypeDB Studio, names the same server as the gRPC endpoint, so a driver whose connection to the written port is answered with HTTP rather than gRPC retries here.
+
+[caption=""]
+.Returns
+[source,rust]
+----
+Option<Addresses>
+----
+
+[#_struct_ConnectionString_is_tls_enabled_]
+==== is_tls_enabled
+
+[source,rust]
+----
+pub fn is_tls_enabled(&self) -> bool
+----
+
+Retrieves whether the addresses’ scheme requires TLS.
+
+[caption=""]
+.Returns
+[source,rust]
+----
+bool
+----
+
+[#_struct_ConnectionString_password_]
+==== password
+
+[source,rust]
+----
+pub fn password(&self) -> &str
+----
+
+Retrieves the password to connect with.
+
+[caption=""]
+.Returns
+[source,rust]
+----
+&str
+----
+
+[#_struct_ConnectionString_username_]
+==== username
+
+[source,rust]
+----
+pub fn username(&self) -> &str
+----
+
+Retrieves the username to connect as.
+
+[caption=""]
+.Returns
+[source,rust]
+----
+&str
+----
+
+// end::methods[]
+

@@ -1,6 +1,10 @@
 [#_connection_header]
 == Connection
 
+include::{page-version}@external-typedb-driver::partial$http-ts/connection/ConnectionStringError.adoc[]
+
+include::{page-version}@external-typedb-driver::partial$http-ts/connection/ConnectionStringErrorKind.adoc[]
+
 include::{page-version}@external-typedb-driver::partial$http-ts/connection/Database.adoc[]
 
 [#_DriverParams_header]
