@@ -258,16 +258,15 @@ impl ServerManager {
             return Ok(replica);
         }
         let replicas: HashSet<_> = self.read_replicas().iter().cloned().collect();
-        if replicas.len() == 1 && replicas.iter().next().unwrap().replication_status().is_none() {
-            // Only replica without status => not Cluster
-            return Ok(replicas.into_iter().next().unwrap());
-        }
         self.seek_primary_replica_in(replicas, retries, None).await
     }
 
     fn failover_candidates(&self, failed_address: &Address, error: &ConnectionError) -> HashSet<AvailableServer> {
         let replicas: HashSet<_> = self.read_replicas().iter().cloned().collect();
-        if matches!(error, ConnectionError::ClusterServerNotPrimary { .. }) {
+        if matches!(
+            error,
+            ConnectionError::ClusterServerNotPrimary { .. } | ConnectionError::ServerUnavailable { .. }
+        ) {
             replicas // Server is alive — include it as a candidate to query
         } else {
             replicas.into_iter().filter(|r| r.private_address() != failed_address).collect()
@@ -487,7 +486,9 @@ impl ServerManager {
 
     fn read_primary_replica(&self) -> Option<AvailableServer> {
         let replicas = self.read_replicas();
-        find_primary_replica!(replicas.iter()).cloned()
+        find_primary_replica!(replicas.iter())
+            .or_else(|| replicas.iter().find(|replica| replica.replication_status().is_none()))
+            .cloned()
     }
 
     fn server_connection_failed_err(&self, errors: HashMap<Address, Error>) -> Error {
