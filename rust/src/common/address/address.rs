@@ -19,7 +19,10 @@
 
 use std::{fmt, str::FromStr};
 
-use http::{Uri, uri::PathAndQuery};
+use http::{
+    Uri,
+    uri::{Authority, PathAndQuery},
+};
 
 use crate::{
     common::{Error, Result},
@@ -40,6 +43,21 @@ impl Address {
 
     pub(crate) fn uri_scheme(&self) -> Option<&http::uri::Scheme> {
         self.uri.scheme()
+    }
+
+    pub(crate) fn port(&self) -> Option<u16> {
+        self.uri.port_u16()
+    }
+
+    pub(crate) fn with_port(&self, port: u16) -> Self {
+        let mut parts = self.uri.clone().into_parts();
+        let host = self.uri.host().expect("Expected a host in a parsed address");
+        parts.authority =
+            Some(format!("{host}:{port}").parse::<Authority>().expect("Expected valid authority after port change"));
+        if parts.path_and_query.is_none() {
+            parts.path_and_query = Some(PathAndQuery::from_static(Self::DEFAULT_PATH));
+        }
+        Self { uri: Uri::from_parts(parts).expect("Expected valid URI after port change") }
     }
 
     pub(crate) fn with_scheme(&self, scheme: http::uri::Scheme) -> Self {

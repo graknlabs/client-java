@@ -25,9 +25,17 @@ exports_files(
     visibility = ["//visibility:public"],
 )
 
+# Shared by the Rust core and the standalone HTTP driver, which parse connection strings separately.
+filegroup(
+    name = "connection-string-vectors",
+    srcs = ["connection-string-vectors.json"],
+    visibility = ["//visibility:public"],
+)
+
 checkstyle_test(
     name = "checkstyle",
     include = glob(["*"]),
+    exclude = ["connection-string-vectors.json"],
     license_type = "apache-header",
 )
 

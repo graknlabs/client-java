@@ -18,6 +18,7 @@
  */
 
 import { DriverParams, remoteOrigin, resolveOrigin, allOrigins } from "./params";
+import { fallbackParams, parseConnectionString } from "./connection-string";
 import {
     AnalyzeResponse,
     ApiErrorResponse,
@@ -76,6 +77,7 @@ export * from "./analyze";
 export * from "./concept";
 export { parseJson, stringifyJson } from "./json";
 export * from "./params";
+export * from "./connection-string";
 export * from "./analyzed-conjunction";
 export * from "./response";
 
@@ -88,6 +90,47 @@ export class TypeDBHttpDriver {
 
     constructor(private params: DriverParams) {
         this.currentOrigin = remoteOrigin(params);
+    }
+
+    /**
+     * Opens a driver using the addresses and credentials held in a connection string of the form
+     * `typedb://<username>:<password>@<addresses>`. Whether the connection uses TLS is determined
+     * by the addresses' `http://` or `https://` scheme. See `parseConnectionString`.
+     *
+     * The addresses are used as written, with port 8000 assumed where none is given. If an address
+     * carries the gRPC endpoint's default port 1729 and does not answer as TypeDB's HTTP API, the
+     * driver retries on port 8000 and warns on the console, so a connection string written for a
+     * gRPC driver works unchanged. The check is one unauthenticated request to the version
+     * endpoint; it is skipped when no address carries port 1729.
+     */
+    static async fromConnectionString(connectionString: string): Promise<TypeDBHttpDriver> {
+        const params = parseConnectionString(connectionString);
+        const fallback = fallbackParams(params);
+        if (fallback === undefined) return new TypeDBHttpDriver(params);
+        if (await TypeDBHttpDriver.isHttpEndpoint(remoteOrigin(params))) return new TypeDBHttpDriver(params);
+        if (await TypeDBHttpDriver.isHttpEndpoint(remoteOrigin(fallback))) {
+            console.warn(
+                "WARN: Using HTTP port 8000 instead of the provided gRPC port 1729. "
+                + "To avoid seeing this warning again, update the provided connection string, setting its port to 8000."
+            );
+            return new TypeDBHttpDriver(fallback);
+        }
+        throw new Error(
+            `Could not connect using the connection string: neither ${remoteOrigin(params)} nor, `
+            + `since that address carries the gRPC default port 1729, ${remoteOrigin(fallback)} answered as TypeDB's HTTP API.`
+        );
+    }
+
+    /** Whether `origin` answers the unauthenticated version endpoint with a TypeDB version document. */
+    private static async isHttpEndpoint(origin: string): Promise<boolean> {
+        try {
+            const resp = await fetch(`${origin}/v1/version`, { method: "GET" });
+            if (!resp.ok) return false;
+            const json = parseJson(await resp.text());
+            return typeof json?.version === "string";
+        } catch {
+            return false;
+        }
     }
 
     getDatabases(): Promise<ApiResponse<DatabasesListResponse>> {

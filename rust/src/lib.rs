@@ -29,8 +29,8 @@
 pub use self::connection::database::import_stream::DatabaseImportStream;
 pub use self::{
     common::{
-        Address, Addresses, BoxPromise, BoxStream, Error, IID, Promise, QueryOptions, Result, TransactionOptions,
-        TransactionType, box_stream, error, info,
+        Address, Addresses, BoxPromise, BoxStream, ConnectionString, Error, IID, Promise, QueryOptions, Result,
+        TransactionOptions, TransactionType, box_stream, error, info,
     },
     connection::{
         Credentials, DriverOptions, DriverTlsConfig,

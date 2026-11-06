@@ -1,0 +1,16 @@
+[#_ConnectionStringErrorKind]
+[.doc-api-reference-driver]
+=== ConnectionStringErrorKind
+
+`class`
+
+[source,typescript]
+----
+ConnectionStringErrorKind:
+ | "invalid"
+ | "address_invalid_scheme"
+ | "inconsistent_schemes"
+ | "inconsistent_address_translation"
+----
+
+

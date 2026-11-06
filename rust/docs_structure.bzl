@@ -65,6 +65,7 @@ dir_mapping = {
     "Address.adoc": "connection",
     "Addresses.adoc": "connection",
     "AvailableServer.adoc": "connection",
+    "ConnectionString.adoc": "connection",
     "Credentials.adoc": "connection",
     "Database.adoc": "connection",
     "DatabaseManager.adoc": "connection",

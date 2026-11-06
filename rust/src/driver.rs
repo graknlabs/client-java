@@ -18,11 +18,12 @@
  */
 use std::{collections::HashSet, fmt, sync::Arc};
 
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 
 use crate::{
-    Credentials, DatabaseManager, DriverOptions, Transaction, TransactionOptions, TransactionType, UserManager,
-    common::{Addresses, Result},
+    Credentials, DatabaseManager, DriverOptions, DriverTlsConfig, Transaction, TransactionOptions, TransactionType,
+    UserManager,
+    common::{Addresses, ConnectionString, Result},
     connection::{
         runtime::BackgroundRuntime,
         server::{
@@ -30,6 +31,7 @@ use crate::{
             server_routing::ServerRouting, server_version::ServerVersion,
         },
     },
+    error::ConnectionError,
 };
 
 /// A connection to a TypeDB server which serves as the starting point for all interaction.
@@ -128,6 +130,131 @@ impl TypeDBDriver {
 
         debug!("TypeDB driver initialization completed successfully");
         Ok(Self { server_manager, database_manager, user_manager, background_runtime })
+    }
+
+    /// Creates a new TypeDB connection from a connection string of the form
+    /// `typedb://<username>:<password>@<addresses>`, as produced by TypeDB Studio.
+    ///
+    /// Whether the connection uses TLS is determined by the addresses' `http://` or `https://`
+    /// scheme. If `driver_options` is given, its TLS configuration must agree with that scheme;
+    /// otherwise, TLS is configured from the scheme alone, using the system's native trust roots.
+    /// Pass `driver_options` to override any other default, such as the request timeout.
+    ///
+    /// The addresses are connected to as written, with port 1729 assumed where none is given. If
+    /// an address carries the HTTP endpoint's default port 8000 and answers with HTTP rather than
+    /// gRPC, the driver retries on port 1729 and logs a warning, so a connection string copied
+    /// from TypeDB Studio works unchanged.
+    ///
+    /// # Arguments
+    ///
+    /// * `connection_string` — The connection string describing the addresses and credentials
+    /// * `driver_options` — The DriverOptions to connect with. Optional: defaults are derived from
+    ///   the connection string
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    #[cfg_attr(
+        feature = "sync",
+        doc = "TypeDBDriver::new_from_connection_string(\"typedb://admin:password@https://127.0.0.1:1729\", None)"
+    )]
+    #[cfg_attr(
+        not(feature = "sync"),
+        doc = "TypeDBDriver::new_from_connection_string(\"typedb://admin:password@https://127.0.0.1:1729\", None).await"
+    )]
+    /// ```
+    #[cfg_attr(feature = "sync", maybe_async::must_be_sync)]
+    pub async fn new_from_connection_string(
+        connection_string: impl AsRef<str>,
+        driver_options: Option<DriverOptions>,
+    ) -> Result<Self> {
+        Self::new_from_connection_string_with_description(connection_string, driver_options, Self::DRIVER_LANG).await
+    }
+
+    /// Creates a new TypeDB connection from a connection string, with a description.
+    /// This method is generally used by TypeDB drivers built on top of the Rust driver.
+    /// In other cases, use [`Self::new_from_connection_string`] instead.
+    ///
+    /// # Arguments
+    ///
+    /// * `connection_string` — The connection string describing the addresses and credentials
+    /// * `driver_options` — The DriverOptions to connect with. Optional: defaults are derived from
+    ///   the connection string
+    /// * `driver_lang` — The language of the driver connecting to the server
+    #[cfg_attr(feature = "sync", maybe_async::must_be_sync)]
+    pub async fn new_from_connection_string_with_description(
+        connection_string: impl AsRef<str>,
+        driver_options: Option<DriverOptions>,
+        driver_lang: impl AsRef<str>,
+    ) -> Result<Self> {
+        let connection_string: ConnectionString = connection_string.as_ref().parse()?;
+        let credentials = Credentials::new(connection_string.username(), connection_string.password());
+        let driver_options = Self::driver_options_for(&connection_string, driver_options)?;
+        let driver_lang = driver_lang.as_ref();
+        let error = match Self::new_with_description(
+            connection_string.addresses().clone(),
+            credentials.clone(),
+            driver_options.clone(),
+            driver_lang,
+        )
+        .await
+        {
+            Ok(driver) => return Ok(driver),
+            Err(error) => error,
+        };
+
+        // Only an HTTP answer to a gRPC request justifies a retry: it is what the HTTP endpoint
+        // does, and a connection string written for it names the same server. Any other failure,
+        // such as a refused connection or bad credentials, is reported as it happened.
+        let Some(fallback_addresses) = connection_string.fallback_addresses().filter(|_| error.is_http_response())
+        else {
+            return Err(error);
+        };
+        debug!("Connection string addresses answered with HTTP; retrying at {:?}", fallback_addresses);
+        match Self::new_with_description(fallback_addresses.clone(), credentials, driver_options, driver_lang).await {
+            Ok(driver) => {
+                warn!(
+                    "Using gRPC port 1729 instead of the provided HTTP port 8000. To avoid seeing this warning again, update the provided connection string, setting its port to 1729."
+                );
+                Ok(driver)
+            }
+            Err(fallback_error) => Err(ConnectionError::ConnectionStringFallbackFailed {
+                addresses: connection_string.addresses().to_string(),
+                fallback_addresses: fallback_addresses.to_string(),
+                error: fallback_error.to_string(),
+            }
+            .into()),
+        }
+    }
+
+    /// Reconciles the TLS requirement expressed by a connection string's scheme with any explicitly
+    /// provided options. The scheme is authoritative: options that contradict it are an error
+    /// rather than an override, because silently connecting with the wrong one either fails
+    /// obscurely or sends the password as plaintext.
+    fn driver_options_for(
+        connection_string: &ConnectionString,
+        driver_options: Option<DriverOptions>,
+    ) -> Result<DriverOptions> {
+        let is_tls_enabled = connection_string.is_tls_enabled();
+        match driver_options {
+            Some(driver_options) => {
+                if driver_options.tls_config.is_enabled() != is_tls_enabled {
+                    return Err(ConnectionError::SchemeTlsSettingsMismatch {
+                        scheme: match is_tls_enabled {
+                            true => http::uri::Scheme::HTTPS,
+                            false => http::uri::Scheme::HTTP,
+                        },
+                        is_tls_enabled: driver_options.tls_config.is_enabled(),
+                    }
+                    .into());
+                }
+                Ok(driver_options)
+            }
+            None => Ok(DriverOptions::new(match is_tls_enabled {
+                true => DriverTlsConfig::enabled_with_native_root_ca(),
+                false => DriverTlsConfig::disabled(),
+            })),
+        }
     }
 
     /// Checks it this connection is opened.

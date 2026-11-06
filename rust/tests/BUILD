@@ -32,6 +32,8 @@ rustfmt_test(
         "//rust/tests/behaviour/driver:test_query",
         "//rust/tests/behaviour/driver:test_user",
 
+        "//rust/tests/integration:test_connection_string",
+        "//rust/tests/integration:test_connection_string_connect",
         "//rust/tests/integration:test_driver",
         "//rust/tests/integration:test_example",
         "//rust/tests/integration:test_values",

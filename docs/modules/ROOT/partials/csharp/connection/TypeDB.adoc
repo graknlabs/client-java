@@ -112,5 +112,76 @@ a| `driverOptions` a| The driver connection options to connect with. a| `DriverO
 TypeDB.Driver(addressTranslation, credentials, driverOptions); TypeDB.Driver Definition TypeDB.cs:29 TypeDB Definition TypeDB.cs:29
 ----
 
+[#_static_IDriver_TypeDB_Driver_TypeDB_DriverFromConnectionString_string_connectionString_]
+==== method ``DriverFromConnectionString``
+
+[source,cs]
+----
+static IDriver DriverFromConnectionString(string connectionString)
+----
+
+
+
+Open a TypeDB Driver using the addresses and credentials held in a connection string of the form ``typedb://<username>:<password>@<addresses>``.
+
+Whether the connection uses TLS is determined by the addresses' ``http://`` or ``https://`` scheme, using the system's native trust roots. The addresses are connected to as written, with port 1729 assumed where none is given. If an address carries the HTTP endpoint's default port 8000 and answers with HTTP rather than gRPC, the driver retries on port 1729 and logs a warning, so a connection string copied from TypeDB Studio works unchanged.
+
+
+[caption=""]
+.Input parameters
+[cols=",,"]
+[options="header"]
+|===
+|Name |Description |Type
+a| `connectionString` a| The connection string holding the addresses and credentials to connect with. a| `string`
+|===
+
+[caption=""]
+.Returns
+`IDriver`
+
+[caption=""]
+.Code examples
+[source,cs]
+----
+TypeDB.DriverFromConnectionString(connectionString);
+----
+
+[#_static_IDriver_TypeDB_Driver_TypeDB_DriverFromConnectionString_string_connectionString_DriverOptions_driverOptions_]
+==== method ``DriverFromConnectionString``
+
+[source,cs]
+----
+static IDriver DriverFromConnectionString(string connectionString, DriverOptions driverOptions)
+----
+
+
+
+Open a TypeDB Driver using the addresses and credentials held in a connection string, with explicit driver options.
+
+The connection string's ``http://`` or ``https://`` scheme is authoritative: the given options' TLS configuration must agree with it.
+
+
+[caption=""]
+.Input parameters
+[cols=",,"]
+[options="header"]
+|===
+|Name |Description |Type
+a| `connectionString` a| The connection string holding the addresses and credentials to connect with. a| `string`
+a| `driverOptions` a| The driver connection options to connect with. a| `DriverOptions`
+|===
+
+[caption=""]
+.Returns
+`IDriver`
+
+[caption=""]
+.Code examples
+[source,cs]
+----
+TypeDB.DriverFromConnectionString(connectionString, driverOptions);
+----
+
 // end::methods[]
 

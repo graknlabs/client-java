@@ -140,5 +140,77 @@ a| `driverOptions` a| The driver connection options to connect with a| `DriverOp
 TypeDB.driver(addresses);
 ----
 
+[#_TypeDB_driverFromConnectionString_java_lang_String]
+==== method ``driverFromConnectionString``
+
+[source,java]
+----
+public static Driver driverFromConnectionString​(java.lang.String connectionString)
+                                         throws TypeDBDriverException
+----
+
+Open a TypeDB Driver using the addresses and credentials held in a connection string of the form ``typedb://&lt;username&gt;:&lt;password&gt;@&lt;addresses&gt;``.
+
+Whether the connection uses TLS is determined by the addresses' ``http://`` or ``https://`` scheme, using the system's native trust roots.
+
+The addresses are connected to as written, with port 1729 assumed where none is given. If an address carries the HTTP endpoint's default port 8000 and answers with HTTP rather than gRPC, the driver retries on port 1729 and logs a warning, so a connection string copied from TypeDB Studio works unchanged.
+
+
+[caption=""]
+.Input parameters
+[cols=",,"]
+[options="header"]
+|===
+|Name |Description |Type
+a| `connectionString` a| The connection string holding the addresses and credentials to connect with a| `java.lang.String`
+|===
+
+[caption=""]
+.Returns
+`public static Driver`
+
+[caption=""]
+.Code examples
+[source,java]
+----
+TypeDB.driverFromConnectionString(connectionString);
+----
+
+[#_TypeDB_driverFromConnectionString_java_lang_String_DriverOptions]
+==== method ``driverFromConnectionString``
+
+[source,java]
+----
+public static Driver driverFromConnectionString​(java.lang.String connectionString,
+                                                DriverOptions driverOptions)
+                                         throws TypeDBDriverException
+----
+
+Open a TypeDB Driver using the addresses and credentials held in a connection string, with explicit driver options.
+
+The connection string's ``http://`` or ``https://`` scheme is authoritative: the given options' TLS configuration must agree with it.
+
+
+[caption=""]
+.Input parameters
+[cols=",,"]
+[options="header"]
+|===
+|Name |Description |Type
+a| `connectionString` a| The connection string holding the addresses and credentials to connect with a| `java.lang.String`
+a| `driverOptions` a| The driver connection options to connect with a| `DriverOptions`
+|===
+
+[caption=""]
+.Returns
+`public static Driver`
+
+[caption=""]
+.Code examples
+[source,java]
+----
+TypeDB.driverFromConnectionString(connectionString, driverOptions);
+----
+
 // end::methods[]
 

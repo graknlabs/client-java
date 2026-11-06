@@ -146,3 +146,11 @@
 [[test]]
 	name = "test_values"
 	path = "tests/integration/values.rs"
+
+[[test]]
+	name = "test_connection_string"
+	path = "tests/integration/connection_string.rs"
+
+[[test]]
+	name = "test_connection_string_connect"
+	path = "tests/integration/connection_string_connect.rs"

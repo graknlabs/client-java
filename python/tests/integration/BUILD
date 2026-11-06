@@ -37,6 +37,17 @@ py_test(
 )
 
 py_test(
+    name = "test_connection_string",
+    srcs = ["test_connection_string.py"],
+    deps = [
+        "//python:driver_python",
+        requirement("PyHamcrest"),
+    ],
+    data = ["//python:native-driver-binary-link", "//python:native-driver-wrapper-link"],
+    python_version = "PY3",
+)
+
+py_test(
     name = "test_driver",
     srcs = ["test_driver.py"],
     deps = [

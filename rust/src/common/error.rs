@@ -202,6 +202,16 @@ error_messages! { ConnectionError
         38: "Scheme {scheme} is not compatible with tls setting `enabled: {is_tls_enabled}`",
     RequestTimeout { timeout: String } =
         39: "Request timed out after {timeout}. The server may be unresponsive.",
+    InvalidConnectionString { reason: String } =
+        40: "Invalid connection string: {reason}. Expected the format 'typedb://<username>:<password>@<addresses>'.",
+    ConnectionStringInconsistentSchemes =
+        41: "Invalid connection string: all addresses must use the same scheme, as one TLS configuration applies to the whole connection.",
+    ConnectionStringInconsistentAddressTranslation =
+        42: "Invalid connection string: either all addresses or none must be 'public;private' translation pairs.",
+    ConnectionStringAddressInvalidScheme { address: String } =
+        43: "Invalid connection string: address '{address}' must specify either the 'http://' or the 'https://' scheme.",
+    ConnectionStringFallbackFailed { addresses: String, fallback_addresses: String, error: String } =
+        44: "Could not connect using the connection string. The addresses {addresses} answered with HTTP rather than gRPC, as the HTTP endpoint on port 8000 would, so the driver retried the gRPC default port at {fallback_addresses}, which failed: {error}",
 }
 
 impl ConnectionError {
@@ -336,6 +346,16 @@ pub enum Error {
 }
 
 impl Error {
+    /// Whether the peer answered a gRPC request with a plain HTTP response, which is what the
+    /// server's HTTP endpoint does: it speaks HTTP/2, so the request reaches it, and it has no
+    /// route for the gRPC path, so it answers 404 (observed against TypeDB 3.13.0). The message is
+    /// tonic's, produced when a response carries an HTTP status but no gRPC status. A plain
+    /// HTTP/1.1 server fails the HTTP/2 handshake instead, and a closed port is refused, so neither
+    /// matches.
+    pub(crate) fn is_http_response(&self) -> bool {
+        self.to_string().contains("mapped from HTTP status code")
+    }
+
     pub fn code(&self) -> String {
         match self {
             Self::Analyze(error) => error.format_code(),

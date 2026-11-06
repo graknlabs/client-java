@@ -16,11 +16,16 @@ a| `AnalyzeNoResponse`
 a| `BrokenPipe`
 a| `ClusterServerNotPrimary`
 a| `ConnectionRefusedNetworking`
+a| `ConnectionStringAddressInvalidScheme`
+a| `ConnectionStringFallbackFailed`
+a| `ConnectionStringInconsistentAddressTranslation`
+a| `ConnectionStringInconsistentSchemes`
 a| `DatabaseExportChannelIsClosed`
 a| `DatabaseExportStreamNoResponse`
 a| `DatabaseImportChannelIsClosed`
 a| `DatabaseImportStreamUnexpectedResponse`
 a| `EncryptionSettingsMismatch`
+a| `InvalidConnectionString`
 a| `ListsNotImplemented`
 a| `MissingPort`
 a| `MissingResponseField`

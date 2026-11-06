@@ -1,0 +1,283 @@
+{
+  "comment": [
+    "Shared conformance vectors for TypeDB connection string parsing.",
+    "The Rust core (rust/src/common/address/connection_string.rs) and the standalone HTTP driver",
+    "(http-ts/src/connection-string.ts) parse connection strings independently, so both read this file to stay",
+    "in step. Any change to the grammar belongs here first.",
+    "Addresses are written as authority only, since the scheme is captured by 'tls'. The literal '{port}' stands",
+    "for the implementation's default port: 1729 for the Rust core and the drivers built on it, 8000 for the HTTP",
+    "driver. Explicit ports are always kept by the parser: falling back to the default port when an address",
+    "answers with the other protocol is the connecting driver's job, not the parser's."
+  ],
+  "vectors": [
+    {
+      "name": "single address",
+      "connection_string": "typedb://admin:password@https://127.0.0.1:1729",
+      "expect": {
+        "username": "admin",
+        "password": "password",
+        "tls": true,
+        "direct": [
+          "127.0.0.1:1729"
+        ]
+      }
+    },
+    {
+      "name": "scheme http disables tls",
+      "connection_string": "typedb://admin:password@http://127.0.0.1:1729",
+      "expect": {
+        "username": "admin",
+        "password": "password",
+        "tls": false,
+        "direct": [
+          "127.0.0.1:1729"
+        ]
+      }
+    },
+    {
+      "name": "absent port defaults",
+      "connection_string": "typedb://admin:password@https://localhost",
+      "expect": {
+        "username": "admin",
+        "password": "password",
+        "tls": true,
+        "direct": [
+          "localhost:{port}"
+        ]
+      }
+    },
+    {
+      "name": "absent port defaults for ipv6 literal",
+      "connection_string": "typedb://admin:password@http://[::1]",
+      "expect": {
+        "username": "admin",
+        "password": "password",
+        "tls": false,
+        "direct": [
+          "[::1]:{port}"
+        ]
+      }
+    },
+    {
+      "name": "multiple addresses",
+      "connection_string": "typedb://admin:password@https://node-1:1800,https://node-2:1801,https://node-3:1802",
+      "expect": {
+        "username": "admin",
+        "password": "password",
+        "tls": true,
+        "direct": [
+          "node-1:1800",
+          "node-2:1801",
+          "node-3:1802"
+        ]
+      }
+    },
+    {
+      "name": "translated addresses",
+      "connection_string": "typedb://admin:password@https://typedb-cloud.ext:1729;https://127.0.0.1:1729",
+      "expect": {
+        "username": "admin",
+        "password": "password",
+        "tls": true,
+        "translated": {
+          "typedb-cloud.ext:1729": "127.0.0.1:1729"
+        }
+      }
+    },
+    {
+      "name": "database segment is discarded",
+      "connection_string": "typedb://admin:password@https://127.0.0.1:1729/my-database",
+      "expect": {
+        "username": "admin",
+        "password": "password",
+        "tls": true,
+        "direct": [
+          "127.0.0.1:1729"
+        ]
+      }
+    },
+    {
+      "name": "empty database segment is discarded",
+      "connection_string": "typedb://admin:password@https://127.0.0.1:1729/",
+      "expect": {
+        "username": "admin",
+        "password": "password",
+        "tls": true,
+        "direct": [
+          "127.0.0.1:1729"
+        ]
+      }
+    },
+    {
+      "name": "query parameters are discarded, known and unknown alike",
+      "connection_string": "typedb://admin:password@https://127.0.0.1:1729/my-database?name=My%20Server&request-timeout=30&nonsense=1",
+      "expect": {
+        "username": "admin",
+        "password": "password",
+        "tls": true,
+        "direct": [
+          "127.0.0.1:1729"
+        ]
+      }
+    },
+    {
+      "name": "query parameters without a database segment are discarded",
+      "connection_string": "typedb://admin:password@https://127.0.0.1:1729?name=My%20Server",
+      "expect": {
+        "username": "admin",
+        "password": "password",
+        "tls": true,
+        "direct": [
+          "127.0.0.1:1729"
+        ]
+      }
+    },
+    {
+      "name": "other protocol's default port is kept by the parser",
+      "connection_string": "typedb://admin:password@https://localhost:8000",
+      "expect": {
+        "username": "admin",
+        "password": "password",
+        "tls": true,
+        "direct": [
+          "localhost:8000"
+        ]
+      }
+    },
+    {
+      "name": "studio string with the http port parses for both protocols",
+      "connection_string": "typedb://admin:password@https://typedb-cloud.ext:8000;https://127.0.0.1:8000/my-database?name=Studio",
+      "expect": {
+        "username": "admin",
+        "password": "password",
+        "tls": true,
+        "translated": {
+          "typedb-cloud.ext:8000": "127.0.0.1:8000"
+        }
+      }
+    },
+    {
+      "name": "percent-encoded credentials are decoded",
+      "connection_string": "typedb://user%40example.com:p%40ss%3Aword%2F%3F@https://127.0.0.1:1729",
+      "expect": {
+        "username": "user@example.com",
+        "password": "p@ss:word/?",
+        "tls": true,
+        "direct": [
+          "127.0.0.1:1729"
+        ]
+      }
+    },
+    {
+      "name": "unencoded at sign in password splits at the last one",
+      "connection_string": "typedb://admin:p@ssword@https://127.0.0.1:1729",
+      "expect": {
+        "username": "admin",
+        "password": "p@ssword",
+        "tls": true,
+        "direct": [
+          "127.0.0.1:1729"
+        ]
+      }
+    },
+    {
+      "name": "unencoded colon in password splits at the first one",
+      "connection_string": "typedb://admin:pass:word@https://127.0.0.1:1729",
+      "expect": {
+        "username": "admin",
+        "password": "pass:word",
+        "tls": true,
+        "direct": [
+          "127.0.0.1:1729"
+        ]
+      }
+    },
+    {
+      "name": "at sign in a query parameter does not split the credentials",
+      "connection_string": "typedb://admin:password@https://127.0.0.1:1729/db?name=a@b",
+      "expect": {
+        "username": "admin",
+        "password": "password",
+        "tls": true,
+        "direct": [
+          "127.0.0.1:1729"
+        ]
+      }
+    },
+    {
+      "name": "wrong scheme",
+      "connection_string": "typedbs://admin:password@https://127.0.0.1:1729",
+      "error": "invalid"
+    },
+    {
+      "name": "no scheme",
+      "connection_string": "admin:password@https://127.0.0.1:1729",
+      "error": "invalid"
+    },
+    {
+      "name": "no credentials",
+      "connection_string": "typedb://https://127.0.0.1:1729",
+      "error": "invalid"
+    },
+    {
+      "name": "no password separator",
+      "connection_string": "typedb://admin@https://127.0.0.1:1729",
+      "error": "invalid"
+    },
+    {
+      "name": "empty username",
+      "connection_string": "typedb://:password@https://127.0.0.1:1729",
+      "error": "invalid"
+    },
+    {
+      "name": "empty password",
+      "connection_string": "typedb://admin:@https://127.0.0.1:1729",
+      "error": "invalid"
+    },
+    {
+      "name": "no addresses",
+      "connection_string": "typedb://admin:password@",
+      "error": "invalid"
+    },
+    {
+      "name": "no addresses before database",
+      "connection_string": "typedb://admin:password@/my-database",
+      "error": "invalid"
+    },
+    {
+      "name": "empty address in list",
+      "connection_string": "typedb://admin:password@https://node-1:1729,,https://node-2:1730",
+      "error": "invalid"
+    },
+    {
+      "name": "truncated percent-encoding",
+      "connection_string": "typedb://admin:pass%2@https://127.0.0.1:1729",
+      "error": "invalid"
+    },
+    {
+      "name": "address without a scheme",
+      "connection_string": "typedb://admin:password@127.0.0.1:1729",
+      "error": "address_invalid_scheme"
+    },
+    {
+      "name": "address with an unsupported scheme",
+      "connection_string": "typedb://admin:password@grpc://127.0.0.1:1729",
+      "error": "address_invalid_scheme"
+    },
+    {
+      "name": "addresses disagreeing on the scheme",
+      "connection_string": "typedb://admin:password@https://node-1:1729,http://node-2:1730",
+      "error": "inconsistent_schemes"
+    },
+    {
+      "name": "translation pair disagreeing on the scheme",
+      "connection_string": "typedb://admin:password@https://typedb-cloud.ext:1729;http://127.0.0.1:1729",
+      "error": "inconsistent_schemes"
+    },
+    {
+      "name": "translated and plain addresses mixed",
+      "connection_string": "typedb://admin:password@https://typedb-cloud.ext:1729;https://127.0.0.1:1729,https://node-2:1730",
+      "error": "inconsistent_address_translation"
+    }
+  ]
+}

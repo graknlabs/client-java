@@ -33,6 +33,8 @@ static_function_mapping = {
     "hostPortFromOrigin": "connection",
     "resolveOrigin": "connection",
     "allOrigins": "connection",
+    "parseConnectionString": "connection",
+    "fallbackParams": "connection",
 }
 
 class_nesting_prefixes = [
@@ -75,6 +77,8 @@ dir_mapping = {
     "ConceptRowsQueryResponse.adoc": "response",
     "Database.adoc": "connection",
     "DatabasesListResponse.adoc": "response",
+    "ConnectionStringError.adoc": "connection",
+    "ConnectionStringErrorKind.adoc": "connection",
     "DriverParamsBasic.adoc": "connection",
     "DriverParamsTranslated.adoc": "connection",
     "Entity.adoc": "concept",

@@ -18,7 +18,7 @@
  */
 
 pub use self::{
-    address::{Address, Addresses},
+    address::{Address, Addresses, ConnectionString},
     error::Error,
     promise::{BoxPromise, Promise, box_promise},
     query_options::QueryOptions,

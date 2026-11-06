@@ -26,7 +26,7 @@ use crate::{
         error::{try_release, try_release_optional, unwrap_or_default, unwrap_void},
         iterator::CIterator,
         iterators_to_map,
-        memory::{borrow, free, release, string_array_view, string_view},
+        memory::{borrow, borrow_optional, free, release, string_array_view, string_view},
     },
     server::{
         server::ServerIterator,
@@ -107,6 +107,37 @@ pub extern "C" fn driver_new_with_address_translation(
         unwrap_or_default(Addresses::try_from_translation_str(addresses)),
         borrow(credentials).clone(),
         borrow(driver_options).clone(),
+        driver_lang_or_default(driver_lang),
+    ))
+}
+
+/// Open a TypeDB Driver using the addresses and credentials held in a connection string of the form
+/// <code>typedb://&lt;username&gt;:&lt;password&gt;\@&lt;addresses&gt;</code>.
+///
+/// Whether the connection uses TLS is determined by the addresses' <code>http://</code> or
+/// <code>https://</code> scheme. If <code>driver_options</code> is provided, its TLS configuration
+/// must agree with that scheme; otherwise, TLS is configured from the scheme alone, using the
+/// system's native trust roots.
+///
+/// The addresses are connected to as written, with port 1729 assumed where none is given. If an
+/// address carries the HTTP endpoint's default port 8000 and answers with HTTP rather than gRPC,
+/// the driver retries on port 1729 and logs a warning, so a connection string copied from TypeDB
+/// Studio works unchanged.
+///
+/// @param connection_string The connection string holding the addresses and credentials to connect with
+/// @param driver_options The <code>DriverOptions</code> to connect with.
+///        Nullable: pass NULL to derive the options from the connection string.
+/// @param driver_lang The language of the driver connecting to the server.
+///        Nullable: pass NULL to default to "c".
+#[unsafe(no_mangle)]
+pub extern "C" fn driver_new_from_connection_string(
+    connection_string: *const c_char,
+    driver_options: *const DriverOptions,
+    driver_lang: *const c_char,
+) -> *mut TypeDBDriver {
+    try_release(TypeDBDriver::new_from_connection_string_with_description(
+        string_view(connection_string),
+        borrow_optional(driver_options).cloned(),
         driver_lang_or_default(driver_lang),
     ))
 }

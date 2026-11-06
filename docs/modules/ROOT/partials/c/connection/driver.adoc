@@ -122,6 +122,38 @@ a| `driver_lang` a| The language of the driver connecting to the server. Nullabl
 .Returns
 `struct TypeDBDriver*`
 
+[#_driver_new_from_connection_string]
+==== function ``driver_new_from_connection_string``
+
+[source,c]
+----
+struct TypeDBDriver* driver_new_from_connection_string(const char* connection_string, const struct DriverOptions* driver_options, const char* driver_lang)
+----
+
+
+
+Open a TypeDB Driver using the addresses and credentials held in a connection string of the form ``typedb://&lt;username&gt;:&lt;password&gt;@&lt;addresses&gt;``.
+
+Whether the connection uses TLS is determined by the addresses' ``http://`` or ``https://`` scheme. If ``driver_options`` is provided, its TLS configuration must agree with that scheme; otherwise, TLS is configured from the scheme alone, using the system's native trust roots.
+
+The addresses are connected to as written, with port 1729 assumed where none is given. If an address carries the HTTP endpoint's default port 8000 and answers with HTTP rather than gRPC, the driver retries on port 1729 and logs a warning, so a connection string copied from TypeDB Studio works unchanged.
+
+
+[caption=""]
+.Input parameters
+[cols=",,"]
+[options="header"]
+|===
+|Name |Description |Type
+a| `connection_string` a| The connection string holding the addresses and credentials to connect with a| `const char*`
+a| `driver_options` a| The ``DriverOptions`` to connect with. Nullable: pass NULL to derive the options from the connection string. a| `const struct DriverOptions*`
+a| `driver_lang` a| The language of the driver connecting to the server. Nullable: pass NULL to default to "c". a| `const char*`
+|===
+
+[caption=""]
+.Returns
+`struct TypeDBDriver*`
+
 [#_driver_new_with_address_translation]
 ==== function ``driver_new_with_address_translation``
 
