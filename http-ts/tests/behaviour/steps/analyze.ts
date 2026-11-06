@@ -199,6 +199,9 @@ function encodeConstraint(constraint: ConstraintAny, encoder: FunctorEncoder): s
             return encoder.makeFunctor("Value",
                 encodeConstraintVertex(constraint.attributeType, encoder),
                 constraint.valueType);
+        case "isSet":
+            return encoder.makeFunctor("IsSet",
+                encoder.encodeAsList(constraint.variables.map(v => encodeConstraintVertex(v, encoder))));
         case "label":
             return encoder.makeFunctor("Label",
                 encodeConstraintVertex(constraint.type, encoder),
