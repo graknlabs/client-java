@@ -52,28 +52,28 @@ bazel_dep(name = "typedb_bazel_distribution", version = "0.0.0")
 git_override(
     module_name = "typedb_bazel_distribution",
     remote = "https://github.com/typedb/bazel-distribution",
-    commit = "3140b73924132511cfd4015479816f94351b90a8",
+    commit = "c496caa8603aed28411b806e37ce3ebfe7e2812a",
 )
 
 bazel_dep(name = "typedb_dependencies", version = "0.0.0")
 git_override(
     module_name = "typedb_dependencies",
     remote = "https://github.com/typedb/dependencies",
-    commit = "6a0a8e0b43f29cdb0f4eb6105db6dc62299b00cb",
+    commit = "e1b0d89c54d50a1fb54b511270a294d506fbf329",
 )
 
 bazel_dep(name = "typedb_protocol", version = "0.0.0")
 git_override(
     module_name = "typedb_protocol",
     remote = "https://github.com/typedb/typedb-protocol",
-    commit = "063a412ecd0d83596b083dc49da5e7cfb899ab25",
+    commit = "99e080bd0d599ae235607da4e4e69787e681cbe1",
 )
 
 bazel_dep(name = "typedb_behaviour", version = "0.0.0")
 git_override(
     module_name = "typedb_behaviour",
     remote = "https://github.com/typedb/typedb-behaviour",
-    commit = "63c4480c7fa38875d745c5c5ccc2a4fbea2bb683",
+    commit = "016e9d9465aa8aeaffdf9543987ca9a8b5444695",
 )
 
 # Rust rules need typedb_dependencies for patching
@@ -244,7 +244,7 @@ workspace_refs = use_repo_rule("@typedb_bazel_distribution//common/workspace_ref
 workspace_refs(
     name = "typedb_driver_workspace_refs",
     workspace_commit_dict = {
-        "typedb_protocol+": "063a412ecd0d83596b083dc49da5e7cfb899ab25",
+        "typedb_protocol+": "99e080bd0d599ae235607da4e4e69787e681cbe1",
     },
     workspace_tag_dict = {
 #        "typedb_protocol+": "3.14.0",
@@ -258,14 +258,14 @@ native_artifact_files.artifact(
     name = "typedb_artifact",
     group_name = "typedb-all-{platform}",
     artifact_name = "typedb-all-{platform}-{version}.{ext}",
-    commit = "499dedd67eb4ee55bec45d217fb2bcf5942961ff",
+    commit = "bcf527e4a83a70cae0922e3c24b5cea67b7dc5e3",
 )
 # IMPORTANT: must be CLUSTERED typedb-cluster (with multi-node support)!
 native_artifact_files.artifact(
     name = "typedb_cluster_artifact",
     group_name = "typedb-cluster-all-{platform}",
     artifact_name = "typedb-cluster-all-{platform}-{version}.{ext}",
-    commit = "17f1f32f3149e4c0df59efef35de113731ccd067",
+    commit = "0745c82fad9d07dad4ffd3d72c31dab94f67271b",
     private = True,
 )
 
