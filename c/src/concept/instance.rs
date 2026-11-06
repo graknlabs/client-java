@@ -27,7 +27,10 @@ use crate::common::memory::release;
 /// Retrieves the type which this ``Entity`` belongs to.
 #[unsafe(no_mangle)]
 pub extern "C" fn entity_get_type(entity: *const Concept) -> *mut Concept {
-    borrow_as_entity(entity).type_().map(|type_| release(Concept::EntityType(type_.clone()))).unwrap_or_else(null_mut)
+    borrow_as_entity(entity)
+        .type_()
+        .map(|type_| release(Concept::EntityType(type_.clone())))
+        .unwrap_or_else(null_mut)
 }
 
 /// Retrieves the type which this ``Relation`` belongs to.

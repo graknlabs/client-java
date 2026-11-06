@@ -29,7 +29,11 @@ use typedb_driver::Error;
 
 pub(crate) fn release<T>(t: T) -> *mut T {
     let raw = Box::into_raw(Box::new(t));
-    trace!("Releasing ownership of <{}> @ {:?}", std::any::type_name::<T>(), raw);
+    trace!(
+        "Releasing ownership of <{}> @ {:?}",
+        std::any::type_name::<T>(),
+        raw
+    );
     raw
 }
 
@@ -49,17 +53,29 @@ pub(crate) fn release_optional_string(str: Option<String>) -> *mut c_char {
 
 pub(crate) fn release_arc<T>(t: Arc<T>) -> *const T {
     let raw = Arc::into_raw(t);
-    trace!("Releasing ownership of arc <{}> @ {:?}", std::any::type_name::<T>(), raw);
+    trace!(
+        "Releasing ownership of arc <{}> @ {:?}",
+        std::any::type_name::<T>(),
+        raw
+    );
     raw
 }
 
 pub(crate) fn take_arc<T>(raw: *const T) -> Arc<T> {
-    trace!("Taking ownership of arced <{}> @ {:?}", std::any::type_name::<T>(), raw);
+    trace!(
+        "Taking ownership of arced <{}> @ {:?}",
+        std::any::type_name::<T>(),
+        raw
+    );
     unsafe { Arc::from_raw(raw) }
 }
 
 pub(crate) fn decrement_arc<T>(raw: *const T) {
-    trace!("Decrementing arced <{}> @ {:?}", std::any::type_name::<T>(), raw);
+    trace!(
+        "Decrementing arced <{}> @ {:?}",
+        std::any::type_name::<T>(),
+        raw
+    );
     assert!(!raw.is_null());
     drop(take_arc(raw))
 }
@@ -71,18 +87,30 @@ pub(crate) fn borrow<T>(raw: *const T) -> &'static T {
 }
 
 pub(crate) fn borrow_mut<T>(raw: *mut T) -> &'static mut T {
-    trace!("Borrowing (mut) <{}> @ {:?}", std::any::type_name::<T>(), raw);
+    trace!(
+        "Borrowing (mut) <{}> @ {:?}",
+        std::any::type_name::<T>(),
+        raw
+    );
     assert!(!raw.is_null());
     unsafe { &mut *raw }
 }
 
 pub(crate) fn borrow_optional<T>(raw: *const T) -> Option<&'static T> {
-    trace!("Borrowing optional (null ok) <{}> @ {:?}", std::any::type_name::<T>(), raw);
+    trace!(
+        "Borrowing optional (null ok) <{}> @ {:?}",
+        std::any::type_name::<T>(),
+        raw
+    );
     unsafe { raw.as_ref() }
 }
 
 pub(crate) fn take_ownership<T>(raw: *mut T) -> T {
-    trace!("Taking ownership of <{}> @ {:?}", std::any::type_name::<T>(), raw);
+    trace!(
+        "Taking ownership of <{}> @ {:?}",
+        std::any::type_name::<T>(),
+        raw
+    );
     assert!(!raw.is_null());
     unsafe { *Box::from_raw(raw) }
 }
@@ -98,7 +126,8 @@ pub(crate) fn string_view(str: *const c_char) -> &'static str {
     assert!(!str.is_null());
     unsafe {
         let cstr = CStr::from_ptr(str);
-        cstr.to_str().unwrap_or_else(|e| panic!("Could not parse {cstr:?}: {e}"))
+        cstr.to_str()
+            .unwrap_or_else(|e| panic!("Could not parse {cstr:?}: {e}"))
     }
 }
 
@@ -119,5 +148,9 @@ pub(crate) fn array_view<T: 'static>(ts: *const *const T) -> impl Iterator<Item 
 
 pub(crate) fn string_array_view(strs: *const *const c_char) -> impl Iterator<Item = &'static str> {
     assert!(!strs.is_null());
-    unsafe { (0..).map_while(move |i| (*strs.add(i)).as_ref()).map(|p| string_view(p)) }
+    unsafe {
+        (0..)
+            .map_while(move |i| (*strs.add(i)).as_ref())
+            .map(|p| string_view(p))
+    }
 }

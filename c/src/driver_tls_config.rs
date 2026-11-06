@@ -40,7 +40,9 @@ pub extern "C" fn driver_tls_config_new_enabled_with_native_root_ca() -> *mut Dr
 
 /// Creates a new <code>DriverTlsConfig</code> with TLS enabled using a custom root CA certificate (PEM).
 #[unsafe(no_mangle)]
-pub extern "C" fn driver_tls_config_new_enabled_with_root_ca_path(tls_root_ca: *const c_char) -> *mut DriverTlsConfig {
+pub extern "C" fn driver_tls_config_new_enabled_with_root_ca_path(
+    tls_root_ca: *const c_char,
+) -> *mut DriverTlsConfig {
     let tls_root_ca_path = Path::new(string_view(tls_root_ca));
     try_release(DriverTlsConfig::enabled_with_root_ca(tls_root_ca_path))
 }
@@ -66,6 +68,14 @@ pub extern "C" fn driver_tls_config_has_root_ca_path(tls_config: *const DriverTl
 /// Returns the TLS root CA set in this <code>DriverTlsConfig</code> object.
 /// Panics if a custom root CA is absent.
 #[unsafe(no_mangle)]
-pub extern "C" fn driver_tls_config_get_root_ca_path(tls_config: *const DriverTlsConfig) -> *mut c_char {
-    release_string(borrow(tls_config).root_ca_path().unwrap().to_string_lossy().to_string())
+pub extern "C" fn driver_tls_config_get_root_ca_path(
+    tls_config: *const DriverTlsConfig,
+) -> *mut c_char {
+    release_string(
+        borrow(tls_config)
+            .root_ca_path()
+            .unwrap()
+            .to_string_lossy()
+            .to_string(),
+    )
 }

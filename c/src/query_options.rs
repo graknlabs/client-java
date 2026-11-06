@@ -37,7 +37,10 @@ pub extern "C" fn query_options_drop(options: *mut QueryOptions) {
 /// If set, specifies if types should be included in instance structs returned in ConceptRow answers.
 /// This option allows reducing the amount of unnecessary data transmitted.
 #[unsafe(no_mangle)]
-pub extern "C" fn query_options_set_include_instance_types(options: *mut QueryOptions, include_instance_types: bool) {
+pub extern "C" fn query_options_set_include_instance_types(
+    options: *mut QueryOptions,
+    include_instance_types: bool,
+) {
     borrow_mut(options).include_instance_types = Some(include_instance_types);
 }
 
@@ -84,7 +87,10 @@ pub extern "C" fn query_options_has_prefetch_size(options: *const QueryOptions) 
 /// Explicitly set the prefetch size.
 /// If set, it requests the server to include the query structure in the answer header.
 #[unsafe(no_mangle)]
-pub extern "C" fn query_options_set_include_query_structure(options: *mut QueryOptions, include_query_structure: bool) {
+pub extern "C" fn query_options_set_include_query_structure(
+    options: *mut QueryOptions,
+    include_query_structure: bool,
+) {
     borrow_mut(options).include_query_structure = Some(include_query_structure);
 }
 

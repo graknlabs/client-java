@@ -52,11 +52,17 @@ pub struct ServerRouting {
 
 impl ServerRouting {
     fn new_auto() -> Self {
-        ServerRouting { type_: ServerRoutingType::Auto, address: std::ptr::null_mut() }
+        ServerRouting {
+            type_: ServerRoutingType::Auto,
+            address: std::ptr::null_mut(),
+        }
     }
 
     fn new_direct(address: *mut c_char) -> Self {
-        ServerRouting { type_: ServerRoutingType::Direct, address }
+        ServerRouting {
+            type_: ServerRoutingType::Direct,
+            address,
+        }
     }
 
     fn to_native(&self) -> NativeServerRouting {
@@ -87,7 +93,9 @@ pub extern "C" fn server_routing_auto() -> *mut ServerRouting {
 /// @param address The address of the server to route to.
 #[unsafe(no_mangle)]
 pub extern "C" fn server_routing_direct(address: *const c_char) -> *mut ServerRouting {
-    release(ServerRouting::new_direct(release_string(string_view(address.clone()).to_string())))
+    release(ServerRouting::new_direct(release_string(
+        string_view(address.clone()).to_string(),
+    )))
 }
 
 /// Drops the <code>ServerRouting</code> object.
@@ -96,7 +104,9 @@ pub extern "C" fn server_routing_drop(server_routing: *mut ServerRouting) {
     free(server_routing)
 }
 
-pub(crate) fn native_server_routing(server_routing: *const ServerRouting) -> Option<NativeServerRouting> {
+pub(crate) fn native_server_routing(
+    server_routing: *const ServerRouting,
+) -> Option<NativeServerRouting> {
     borrow_optional(server_routing).map(ServerRouting::to_native)
 }
 
@@ -110,7 +120,9 @@ impl From<NativeServerRouting> for ServerRouting {
     fn from(value: NativeServerRouting) -> Self {
         match value {
             NativeServerRouting::Auto => ServerRouting::new_auto(),
-            NativeServerRouting::Direct { address } => ServerRouting::new_direct(release_string(address.to_string())),
+            NativeServerRouting::Direct { address } => {
+                ServerRouting::new_direct(release_string(address.to_string()))
+            }
         }
     }
 }

@@ -20,7 +20,8 @@
 use std::{ffi::c_char, ptr::null_mut};
 
 use typedb_driver::{
-    Error, Promise, QueryOptions, Transaction, TransactionOptions, TransactionType, TypeDBDriver, given::GivenRows,
+    Error, Promise, QueryOptions, Transaction, TransactionOptions, TransactionType, TypeDBDriver,
+    given::GivenRows,
 };
 
 use crate::{
@@ -46,7 +47,11 @@ pub extern "C" fn transaction_new(
     type_: TransactionType,
     options: *const TransactionOptions,
 ) -> *mut Transaction {
-    try_release(borrow(driver).transaction_with_options(string_view(database_name), type_, *borrow(options)))
+    try_release(borrow(driver).transaction_with_options(
+        string_view(database_name),
+        type_,
+        *borrow(options),
+    ))
 }
 
 /// Performs a TypeQL query in the transaction.
@@ -78,11 +83,13 @@ pub extern "C" fn transaction_query_given_rows(
     options: *const QueryOptions,
     given_rows: *mut GivenRows,
 ) -> *mut QueryAnswerPromise {
-    release(QueryAnswerPromise::new(Box::new(borrow(transaction).query_with_options_and_rows(
-        string_view(query),
-        *borrow(options),
-        Some(take_ownership(given_rows)),
-    ))))
+    release(QueryAnswerPromise::new(Box::new(
+        borrow(transaction).query_with_options_and_rows(
+            string_view(query),
+            *borrow(options),
+            Some(take_ownership(given_rows)),
+        ),
+    )))
 }
 
 /// Analyzes a TypeQL query in the transaction.
@@ -94,7 +101,9 @@ pub extern "C" fn transaction_analyze(
     transaction: *mut Transaction,
     query: *const c_char,
 ) -> *mut AnalyzedQueryPromise {
-    release(AnalyzedQueryPromise::new(Box::new(borrow(transaction).analyze(string_view(query)))))
+    release(AnalyzedQueryPromise::new(Box::new(
+        borrow(transaction).analyze(string_view(query)),
+    )))
 }
 
 /// Closes the transaction, waits for all callbacks to complete, then frees the memory.
@@ -149,7 +158,10 @@ pub extern "C" fn transaction_on_close(
     callback_id: usize,
     callback: extern "C" fn(usize, *mut Error),
 ) -> *mut VoidPromise {
-    release(VoidPromise(Box::new(
-        borrow(txn).on_close(move |error| callback(callback_id, error.map(|err| release(err)).unwrap_or(null_mut()))),
-    )))
+    release(VoidPromise(Box::new(borrow(txn).on_close(move |error| {
+        callback(
+            callback_id,
+            error.map(|err| release(err)).unwrap_or(null_mut()),
+        )
+    }))))
 }

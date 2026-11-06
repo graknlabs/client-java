@@ -22,10 +22,11 @@ use std::{ffi::c_char, ptr::addr_of_mut};
 use typedb_driver::{
     BoxPromise, Promise,
     analyze::{
-        AnalyzedQuery, Fetch, Function, Given, ReturnOperation, TypeAnnotations, VariableAnnotations,
+        AnalyzedQuery, Fetch, Function, Given, ReturnOperation, TypeAnnotations,
+        VariableAnnotations,
         conjunction::{
-            Comparator, Conjunction, ConjunctionID, Constraint, ConstraintExactness, ConstraintVertex,
-            ConstraintWithSpan, NamedRole, Variable,
+            Comparator, Conjunction, ConjunctionID, Constraint, ConstraintExactness,
+            ConstraintVertex, ConstraintWithSpan, NamedRole, Variable,
         },
         pipeline::{Pipeline, PipelineStage, ReduceAssignment, Reducer, SortOrder, SortVariable},
     },
@@ -39,8 +40,8 @@ use crate::{
         error::try_release,
         iterator::{CIterator, iterator_next},
         memory::{
-            borrow, free, release, release_optional, release_optional_string, release_string, string_view,
-            take_ownership,
+            borrow, free, release, release_optional, release_optional_string, release_string,
+            string_view, take_ownership,
         },
     },
     concept::ConceptIterator,
@@ -152,7 +153,9 @@ enum FetchVariant {
 /// In case the operation failed, the error flag will only be set when the promise is resolved.
 /// The native promise object is freed when it is resolved.
 #[unsafe(no_mangle)]
-pub extern "C" fn analyzed_query_promise_resolve(promise: *mut AnalyzedQueryPromise) -> *mut AnalyzedQuery {
+pub extern "C" fn analyzed_query_promise_resolve(
+    promise: *mut AnalyzedQueryPromise,
+) -> *mut AnalyzedQuery {
     try_release(take_ownership(promise).0.resolve())
 }
 
@@ -171,7 +174,9 @@ pub extern "C" fn analyzed_query_pipeline(analyzed_query: *const AnalyzedQuery) 
 /// Returns the analyzed functions in the preamble of the query.
 #[unsafe(no_mangle)]
 pub extern "C" fn analyzed_preamble(analyzed_query: *const AnalyzedQuery) -> *mut FunctionIterator {
-    release(FunctionIterator(CIterator(box_stream(borrow(analyzed_query).preamble.clone().into_iter()))))
+    release(FunctionIterator(CIterator(box_stream(
+        borrow(analyzed_query).preamble.clone().into_iter(),
+    ))))
 }
 
 /// Returns the analyzed given stage, or null if the query has no given stage.
@@ -202,7 +207,11 @@ pub extern "C" fn fetch_variant(fetch: *const Fetch) -> FetchVariant {
 pub extern "C" fn fetch_leaf_annotations(fetch: *const Fetch) -> *mut StringIterator {
     match borrow(fetch) {
         Fetch::Leaf(leaf) => {
-            let iter = leaf.annotations.clone().into_iter().map(|a| Ok(a.name().to_owned()));
+            let iter = leaf
+                .annotations
+                .clone()
+                .into_iter()
+                .map(|a| Ok(a.name().to_owned()));
             release(StringIterator(CIterator(box_stream(iter))))
         }
         _ => unreachable!("Expected Fetch to be Leaf variant"),
@@ -225,7 +234,13 @@ pub extern "C" fn fetch_list_element(fetch: *const Fetch) -> *mut Fetch {
 pub extern "C" fn fetch_object_fields(fetch: *const Fetch) -> *mut StringIterator {
     match borrow(fetch) {
         Fetch::Object(map) => {
-            let iter = map.keys().cloned().collect::<Vec<_>>().clone().into_iter().map(Ok);
+            let iter = map
+                .keys()
+                .cloned()
+                .collect::<Vec<_>>()
+                .clone()
+                .into_iter()
+                .map(Ok);
             release(StringIterator(CIterator(box_stream(iter))))
         }
         _ => unreachable!("Expected Fetch to be Object variant"),
@@ -246,7 +261,9 @@ pub extern "C" fn fetch_object_get_field(fetch: *const Fetch, field: *const c_ch
 /// Returns the variables declared in the given stage.
 #[unsafe(no_mangle)]
 pub extern "C" fn given_variables(given: *const Given) -> *mut VariableIterator {
-    release(VariableIterator(CIterator(box_stream(borrow(given).variables.clone().into_iter()))))
+    release(VariableIterator(CIterator(box_stream(
+        borrow(given).variables.clone().into_iter(),
+    ))))
 }
 
 /// Returns the inferred types for the specified variable in the given stage.
@@ -255,7 +272,12 @@ pub extern "C" fn given_variable_annotations(
     given: *const Given,
     variable: *const Variable,
 ) -> *mut VariableAnnotations {
-    release_optional(borrow(given).variable_annotations.get(borrow(variable)).cloned())
+    release_optional(
+        borrow(given)
+            .variable_annotations
+            .get(borrow(variable))
+            .cloned(),
+    )
 }
 
 // Functions
@@ -268,7 +290,9 @@ pub extern "C" fn function_body(function: *const Function) -> *mut Pipeline {
 /// Returns the <code>Variable</code>s which are the arguments of the function.
 #[unsafe(no_mangle)]
 pub extern "C" fn function_argument_variables(function: *const Function) -> *mut VariableIterator {
-    release(VariableIterator(CIterator(box_stream(borrow(function).argument_variables.clone().into_iter()))))
+    release(VariableIterator(CIterator(box_stream(
+        borrow(function).argument_variables.clone().into_iter(),
+    ))))
 }
 
 /// A representation of the <code>ReturnOperation</code> of the function.
@@ -279,7 +303,9 @@ pub extern "C" fn function_return_operation(function: *const Function) -> *mut R
 
 /// Returns the variant of the <code>ReturnOperation</code>.
 #[unsafe(no_mangle)]
-pub extern "C" fn return_operation_variant(return_operation: *const ReturnOperation) -> ReturnOperationVariant {
+pub extern "C" fn return_operation_variant(
+    return_operation: *const ReturnOperation,
+) -> ReturnOperationVariant {
     match borrow(return_operation) {
         ReturnOperation::Stream { .. } => ReturnOperationVariant::StreamReturn,
         ReturnOperation::Single { .. } => ReturnOperationVariant::SingleReturn,
@@ -291,11 +317,13 @@ pub extern "C" fn return_operation_variant(return_operation: *const ReturnOperat
 /// Unwraps the <code>ReturnOperation</code> instance as a Stream variant, and returns the returned variables.
 /// Will panic if the instance is not a Stream variant.
 #[unsafe(no_mangle)]
-pub extern "C" fn return_operation_stream_variables(return_operation: *const ReturnOperation) -> *mut VariableIterator {
+pub extern "C" fn return_operation_stream_variables(
+    return_operation: *const ReturnOperation,
+) -> *mut VariableIterator {
     match borrow(return_operation) {
-        ReturnOperation::Stream { variables, .. } => {
-            release(VariableIterator(CIterator(box_stream(variables.clone().into_iter()))))
-        }
+        ReturnOperation::Stream { variables, .. } => release(VariableIterator(CIterator(
+            box_stream(variables.clone().into_iter()),
+        ))),
         _ => unreachable!("Expected ReturnOperation to be Stream"),
     }
 }
@@ -303,11 +331,13 @@ pub extern "C" fn return_operation_stream_variables(return_operation: *const Ret
 /// Unwraps the <code>ReturnOperation</code> instance as a Single variant, and returns the returned variables.
 /// Will panic if the instance is not a Single variant.
 #[unsafe(no_mangle)]
-pub extern "C" fn return_operation_single_variables(return_operation: *const ReturnOperation) -> *mut VariableIterator {
+pub extern "C" fn return_operation_single_variables(
+    return_operation: *const ReturnOperation,
+) -> *mut VariableIterator {
     match borrow(return_operation) {
-        ReturnOperation::Single { variables, .. } => {
-            release(VariableIterator(CIterator(box_stream(variables.clone().into_iter()))))
-        }
+        ReturnOperation::Single { variables, .. } => release(VariableIterator(CIterator(
+            box_stream(variables.clone().into_iter()),
+        ))),
         _ => unreachable!("Expected ReturnOperation to be Single"),
     }
 }
@@ -315,7 +345,9 @@ pub extern "C" fn return_operation_single_variables(return_operation: *const Ret
 /// Unwraps the <code>ReturnOperation</code> instance as a Single variant, and returns the selector applied.
 /// Will panic if the instance is not a Single variant.
 #[unsafe(no_mangle)]
-pub extern "C" fn return_operation_single_selector(return_operation: *const ReturnOperation) -> *mut c_char {
+pub extern "C" fn return_operation_single_selector(
+    return_operation: *const ReturnOperation,
+) -> *mut c_char {
     match borrow(return_operation) {
         ReturnOperation::Single { selector, .. } => release_string(selector.clone()),
         _ => unreachable!("Expected ReturnOperation to be Single"),
@@ -325,25 +357,31 @@ pub extern "C" fn return_operation_single_selector(return_operation: *const Retu
 /// Unwraps the <code>ReturnOperation</code> instance as a Reduce variant, and returns the reducers applied.
 /// Will panic if the instance is not a Reduce variant.
 #[unsafe(no_mangle)]
-pub extern "C" fn return_operation_reducers(return_operation: *const ReturnOperation) -> *mut ReducerIterator {
+pub extern "C" fn return_operation_reducers(
+    return_operation: *const ReturnOperation,
+) -> *mut ReducerIterator {
     match borrow(return_operation) {
-        ReturnOperation::Reduce { reducers } => {
-            release(ReducerIterator(CIterator(box_stream(reducers.clone().into_iter()))))
-        }
+        ReturnOperation::Reduce { reducers } => release(ReducerIterator(CIterator(box_stream(
+            reducers.clone().into_iter(),
+        )))),
         _ => unreachable!("Expected ReturnOperation to be Reducer"),
     }
 }
 
 /// Returns the inferred type for each argument of the function.
 #[unsafe(no_mangle)]
-pub extern "C" fn function_argument_annotations(function: *const Function) -> *mut VariableAnnotationsIterator {
+pub extern "C" fn function_argument_annotations(
+    function: *const Function,
+) -> *mut VariableAnnotationsIterator {
     let iter = borrow(function).argument_annotations.clone().into_iter();
     release(VariableAnnotationsIterator(CIterator(box_stream(iter))))
 }
 
 /// Returns the inferred type for each concept returned by the function.
 #[unsafe(no_mangle)]
-pub extern "C" fn function_return_annotations(function: *const Function) -> *mut VariableAnnotationsIterator {
+pub extern "C" fn function_return_annotations(
+    function: *const Function,
+) -> *mut VariableAnnotationsIterator {
     let iter = borrow(function).return_annotations.clone().into_iter();
     release(VariableAnnotationsIterator(CIterator(box_stream(iter))))
 }
@@ -352,7 +390,9 @@ pub extern "C" fn function_return_annotations(function: *const Function) -> *mut
 /// Returns an iterator over the stages making up the <code>Pipeline</code>
 #[unsafe(no_mangle)]
 pub extern "C" fn pipeline_stages(pipeline: *const Pipeline) -> *mut PipelineStageIterator {
-    release(PipelineStageIterator(CIterator(box_stream(borrow(pipeline).stages.clone().into_iter()))))
+    release(PipelineStageIterator(CIterator(box_stream(
+        borrow(pipeline).stages.clone().into_iter(),
+    ))))
 }
 
 // Stage field accessors
@@ -404,32 +444,55 @@ pub extern "C" fn pipeline_stage_get_block(stage: *const PipelineStage) -> *mut 
 /// Unwraps the <code>PipelineStage</code> instance as a Delete stage, and returns the variables deleted.
 /// Will panic if the stage is not a Delete.
 #[unsafe(no_mangle)]
-pub extern "C" fn pipeline_stage_delete_get_deleted_variables(stage: *const PipelineStage) -> *mut VariableIterator {
-    let PipelineStage::Delete { deleted_variables, .. } = borrow(stage) else { unreachable!("Expected Delete stage") };
-    release(VariableIterator(CIterator(box_stream(deleted_variables.clone().into_iter()))))
+pub extern "C" fn pipeline_stage_delete_get_deleted_variables(
+    stage: *const PipelineStage,
+) -> *mut VariableIterator {
+    let PipelineStage::Delete {
+        deleted_variables, ..
+    } = borrow(stage)
+    else {
+        unreachable!("Expected Delete stage")
+    };
+    release(VariableIterator(CIterator(box_stream(
+        deleted_variables.clone().into_iter(),
+    ))))
 }
 
 /// Unwraps the <code>PipelineStage</code> instance as a Select stage, and returns the variables selected.
 /// Will panic if the stage is not a Select.
 #[unsafe(no_mangle)]
-pub extern "C" fn pipeline_stage_select_get_variables(stage: *const PipelineStage) -> *mut VariableIterator {
-    let PipelineStage::Select { variables, .. } = borrow(stage) else { unreachable!("Expected Select stage") };
-    release(VariableIterator(CIterator(box_stream(variables.clone().into_iter()))))
+pub extern "C" fn pipeline_stage_select_get_variables(
+    stage: *const PipelineStage,
+) -> *mut VariableIterator {
+    let PipelineStage::Select { variables, .. } = borrow(stage) else {
+        unreachable!("Expected Select stage")
+    };
+    release(VariableIterator(CIterator(box_stream(
+        variables.clone().into_iter(),
+    ))))
 }
 
 /// Unwraps the <code>PipelineStage</code> instance as a Require stage, and returns the required variables.
 /// Will panic if the stage is not a Require stage.
 #[unsafe(no_mangle)]
-pub extern "C" fn pipeline_stage_require_get_variables(stage: *const PipelineStage) -> *mut VariableIterator {
-    let PipelineStage::Require { variables, .. } = borrow(stage) else { unreachable!("Expected Require stage") };
-    release(VariableIterator(CIterator(box_stream(variables.clone().into_iter()))))
+pub extern "C" fn pipeline_stage_require_get_variables(
+    stage: *const PipelineStage,
+) -> *mut VariableIterator {
+    let PipelineStage::Require { variables, .. } = borrow(stage) else {
+        unreachable!("Expected Require stage")
+    };
+    release(VariableIterator(CIterator(box_stream(
+        variables.clone().into_iter(),
+    ))))
 }
 
 /// Unwraps the <code>PipelineStage</code> instance as an Offset stage, and returns the offset applied.
 /// Will panic if the stage is not an Offset stage.
 #[unsafe(no_mangle)]
 pub extern "C" fn pipeline_stage_offset_get_offset(stage: *const PipelineStage) -> i64 {
-    let PipelineStage::Offset { offset, .. } = borrow(stage) else { unreachable!("Expected Offset stage") };
+    let PipelineStage::Offset { offset, .. } = borrow(stage) else {
+        unreachable!("Expected Offset stage")
+    };
     *offset as i64
 }
 
@@ -437,24 +500,38 @@ pub extern "C" fn pipeline_stage_offset_get_offset(stage: *const PipelineStage) 
 /// Will panic if the stage is not a Limit stage.
 #[unsafe(no_mangle)]
 pub extern "C" fn pipeline_stage_limit_get_limit(stage: *const PipelineStage) -> i64 {
-    let PipelineStage::Limit { limit, .. } = borrow(stage) else { unreachable!("Expected Limit stage") };
+    let PipelineStage::Limit { limit, .. } = borrow(stage) else {
+        unreachable!("Expected Limit stage")
+    };
     *limit as i64
 }
 
 /// Unwraps the <code>PipelineStage</code> instance as a Sort stage, and returns the <code>SortVariable</code>.
 /// Will panic if the stage is not a Sort stage.
 #[unsafe(no_mangle)]
-pub extern "C" fn pipeline_stage_sort_get_sort_variables(stage: *const PipelineStage) -> *mut SortVariableIterator {
-    let PipelineStage::Sort { variables, .. } = borrow(stage) else { unreachable!("Expected Sort stage") };
-    release(SortVariableIterator(CIterator(box_stream(variables.clone().into_iter()))))
+pub extern "C" fn pipeline_stage_sort_get_sort_variables(
+    stage: *const PipelineStage,
+) -> *mut SortVariableIterator {
+    let PipelineStage::Sort { variables, .. } = borrow(stage) else {
+        unreachable!("Expected Sort stage")
+    };
+    release(SortVariableIterator(CIterator(box_stream(
+        variables.clone().into_iter(),
+    ))))
 }
 
 /// Unwraps the <code>PipelineStage</code> instance as a Reduce stage, and returns the variables being grouped on.
 /// Will panic if the stage is not a Reduce stage.
 #[unsafe(no_mangle)]
-pub extern "C" fn pipeline_stage_reduce_get_groupby(stage: *const PipelineStage) -> *mut VariableIterator {
-    let PipelineStage::Reduce { groupby, .. } = borrow(stage) else { unreachable!("Expected Reduce stage") };
-    release(VariableIterator(CIterator(box_stream(groupby.clone().into_iter()))))
+pub extern "C" fn pipeline_stage_reduce_get_groupby(
+    stage: *const PipelineStage,
+) -> *mut VariableIterator {
+    let PipelineStage::Reduce { groupby, .. } = borrow(stage) else {
+        unreachable!("Expected Reduce stage")
+    };
+    release(VariableIterator(CIterator(box_stream(
+        groupby.clone().into_iter(),
+    ))))
 }
 
 /// Unwraps the <code>PipelineStage</code> instance as a Reduce stage,
@@ -464,8 +541,12 @@ pub extern "C" fn pipeline_stage_reduce_get_groupby(stage: *const PipelineStage)
 pub extern "C" fn pipeline_stage_reduce_get_reducer_assignments(
     stage: *const PipelineStage,
 ) -> *mut ReduceAssignmentIterator {
-    let PipelineStage::Reduce { reducers, .. } = borrow(stage) else { unreachable!("Expected Reduce stage") };
-    release(ReduceAssignmentIterator(CIterator(box_stream(reducers.clone().into_iter()))))
+    let PipelineStage::Reduce { reducers, .. } = borrow(stage) else {
+        unreachable!("Expected Reduce stage")
+    };
+    release(ReduceAssignmentIterator(CIterator(box_stream(
+        reducers.clone().into_iter(),
+    ))))
 }
 
 /// Returns the variable being sorted on.
@@ -483,14 +564,18 @@ pub extern "C" fn sort_variable_get_order(sort_variable: *const SortVariable) ->
 /// The variable being assigned to in this ReduceAssignment.
 /// e.g. `$c` in <code>$c = sum($x)</code>
 #[unsafe(no_mangle)]
-pub extern "C" fn reduce_assignment_get_assigned(reduce_assignment: *const ReduceAssignment) -> *mut Variable {
+pub extern "C" fn reduce_assignment_get_assigned(
+    reduce_assignment: *const ReduceAssignment,
+) -> *mut Variable {
     release(borrow(reduce_assignment).assigned.clone())
 }
 
 /// The reducer applied in this ReduceAssignment.
 /// e.g. `sum($x)` in <code>$c = sum($x)</code>
 #[unsafe(no_mangle)]
-pub extern "C" fn reduce_assignment_get_reducer(reduce_assignment: *const ReduceAssignment) -> *mut Reducer {
+pub extern "C" fn reduce_assignment_get_reducer(
+    reduce_assignment: *const ReduceAssignment,
+) -> *mut Reducer {
     release(borrow(reduce_assignment).reducer.clone())
 }
 
@@ -505,14 +590,23 @@ pub extern "C" fn reducer_get_name(reducer: *const Reducer) -> *mut c_char {
 /// e.g. `$x` in <code>sum($x)</code>
 #[unsafe(no_mangle)]
 pub extern "C" fn reducer_get_arguments(reducer: *const Reducer) -> *mut VariableIterator {
-    release(VariableIterator(CIterator(box_stream(borrow(reducer).arguments.clone().into_iter()))))
+    release(VariableIterator(CIterator(box_stream(
+        borrow(reducer).arguments.clone().into_iter(),
+    ))))
 }
 
 /// Returns the name of the specified variable if it has one, and null otherwise.
 /// The <code>Pipeline</code> must be the one that contains the variable.
 #[unsafe(no_mangle)]
-pub extern "C" fn variable_get_name(pipeline_structure: *const Pipeline, variable: *const Variable) -> *mut c_char {
-    release_optional_string(borrow(pipeline_structure).variable_name(borrow(variable)).map(str::to_owned))
+pub extern "C" fn variable_get_name(
+    pipeline_structure: *const Pipeline,
+    variable: *const Variable,
+) -> *mut c_char {
+    release_optional_string(
+        borrow(pipeline_structure)
+            .variable_name(borrow(variable))
+            .map(str::to_owned),
+    )
 }
 
 /// Returns the Variable id as u32 to use in hash, equality etc.
@@ -534,7 +628,12 @@ pub extern "C" fn pipeline_get_conjunction(
     pipeline: *const Pipeline,
     conjunction_id: *const ConjunctionID,
 ) -> *mut Conjunction {
-    release_optional(borrow(pipeline).conjunctions.get(borrow(conjunction_id).0).cloned())
+    release_optional(
+        borrow(pipeline)
+            .conjunctions
+            .get(borrow(conjunction_id).0)
+            .cloned(),
+    )
 }
 
 /// Returns the ConjunctionID as u32 to use in hash, equality etc.
@@ -551,14 +650,25 @@ pub extern "C" fn conjunction_id_string_repr(conjunction_id: *const ConjunctionI
 
 /// Returns the <code>Constraint</code>s in the given conjunction.
 #[unsafe(no_mangle)]
-pub extern "C" fn conjunction_get_constraints(conjunction: *const Conjunction) -> *mut ConstraintWithSpanIterator {
-    release(ConstraintWithSpanIterator(CIterator(box_stream(borrow(conjunction).constraints.clone().into_iter()))))
+pub extern "C" fn conjunction_get_constraints(
+    conjunction: *const Conjunction,
+) -> *mut ConstraintWithSpanIterator {
+    release(ConstraintWithSpanIterator(CIterator(box_stream(
+        borrow(conjunction).constraints.clone().into_iter(),
+    ))))
 }
 
 /// Returns the variables in the current conjunction for which type annotations are available
 #[unsafe(no_mangle)]
-pub extern "C" fn conjunction_get_annotated_variables(conjunction: *const Conjunction) -> *mut VariableIterator {
-    let iter = borrow(conjunction).variable_annotations.keys().cloned().collect::<Vec<_>>().into_iter();
+pub extern "C" fn conjunction_get_annotated_variables(
+    conjunction: *const Conjunction,
+) -> *mut VariableIterator {
+    let iter = borrow(conjunction)
+        .variable_annotations
+        .keys()
+        .cloned()
+        .collect::<Vec<_>>()
+        .into_iter();
     release(VariableIterator(CIterator(box_stream(iter))))
 }
 
@@ -568,13 +678,20 @@ pub extern "C" fn conjunction_get_variable_annotations(
     conjunction: *const Conjunction,
     variable: *const Variable,
 ) -> *mut VariableAnnotations {
-    release_optional(borrow(conjunction).variable_annotations.get(borrow(variable)).cloned())
+    release_optional(
+        borrow(conjunction)
+            .variable_annotations
+            .get(borrow(variable))
+            .cloned(),
+    )
 }
 
 /// Returns the variant of the specified VariableAnnotations.
 /// This tells us whether the variable holds an instance, a type or a raw value.
 #[unsafe(no_mangle)]
-pub extern "C" fn variable_annotations_variant(annotations: *const VariableAnnotations) -> VariableAnnotationsVariant {
+pub extern "C" fn variable_annotations_variant(
+    annotations: *const VariableAnnotations,
+) -> VariableAnnotationsVariant {
     match &borrow(annotations).types {
         TypeAnnotations::Instance(_) => VariableAnnotationsVariant::InstanceAnnotations,
         TypeAnnotations::Type(_) => VariableAnnotationsVariant::TypeAnnotations,
@@ -586,10 +703,15 @@ pub extern "C" fn variable_annotations_variant(annotations: *const VariableAnnot
 ///  and returns the possible types of the instances the variable may hold.
 /// Will panic if the variable is not an Instance variable.
 #[unsafe(no_mangle)]
-pub extern "C" fn variable_annotations_instance(annotations: *const VariableAnnotations) -> *mut ConceptIterator {
+pub extern "C" fn variable_annotations_instance(
+    annotations: *const VariableAnnotations,
+) -> *mut ConceptIterator {
     match &borrow(annotations).types {
         TypeAnnotations::Instance(annotations) => release(ConceptIterator(CIterator(box_stream(
-            annotations.clone().into_iter().map(|t| Ok(type_to_concept(t))),
+            annotations
+                .clone()
+                .into_iter()
+                .map(|t| Ok(type_to_concept(t))),
         )))),
         _ => unreachable!("Expected variable to have instance annotations"),
     }
@@ -599,10 +721,15 @@ pub extern "C" fn variable_annotations_instance(annotations: *const VariableAnno
 ///  and returns the possible types the variable may be.
 /// Will panic if the variable is not a Type variable.
 #[unsafe(no_mangle)]
-pub extern "C" fn variable_annotations_type(annotations: *const VariableAnnotations) -> *mut ConceptIterator {
+pub extern "C" fn variable_annotations_type(
+    annotations: *const VariableAnnotations,
+) -> *mut ConceptIterator {
     match &borrow(annotations).types {
         TypeAnnotations::Type(annotations) => release(ConceptIterator(CIterator(box_stream(
-            annotations.clone().into_iter().map(|t| Ok(type_to_concept(t))),
+            annotations
+                .clone()
+                .into_iter()
+                .map(|t| Ok(type_to_concept(t))),
         )))),
         _ => unreachable!("Expected variable to have type annotations"),
     }
@@ -612,11 +739,13 @@ pub extern "C" fn variable_annotations_type(annotations: *const VariableAnnotati
 ///  and returns the possible ValueTypes the value may be.
 /// Will panic if the variable is not a Value variable.
 #[unsafe(no_mangle)]
-pub extern "C" fn variable_annotations_value(annotations: *const VariableAnnotations) -> *mut StringIterator {
+pub extern "C" fn variable_annotations_value(
+    annotations: *const VariableAnnotations,
+) -> *mut StringIterator {
     match &borrow(annotations).types {
-        TypeAnnotations::Value(annotations) => {
-            release(StringIterator(CIterator(box_stream([Ok(annotations.name().to_owned())].into_iter()))))
-        }
+        TypeAnnotations::Value(annotations) => release(StringIterator(CIterator(box_stream(
+            [Ok(annotations.name().to_owned())].into_iter(),
+        )))),
         _ => unreachable!("Expected variable to have value annotations"),
     }
 }
@@ -664,7 +793,9 @@ pub extern "C" fn constraint_variant(constraint: *const ConstraintWithSpan) -> C
 ///  and returns the instance vertex.
 /// Will panic if the Constraint is not an Isa constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_isa_get_instance(constraint: *const ConstraintWithSpan) -> *mut ConstraintVertex {
+pub extern "C" fn constraint_isa_get_instance(
+    constraint: *const ConstraintWithSpan,
+) -> *mut ConstraintVertex {
     let Constraint::Isa { instance, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Isa");
     };
@@ -675,7 +806,9 @@ pub extern "C" fn constraint_isa_get_instance(constraint: *const ConstraintWithS
 ///  and returns the type vertex.
 /// Will panic if the Constraint is not an Isa constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_isa_get_type(constraint: *const ConstraintWithSpan) -> *mut ConstraintVertex {
+pub extern "C" fn constraint_isa_get_type(
+    constraint: *const ConstraintWithSpan,
+) -> *mut ConstraintVertex {
     let Constraint::Isa { r#type: type_, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Isa");
     };
@@ -686,7 +819,9 @@ pub extern "C" fn constraint_isa_get_type(constraint: *const ConstraintWithSpan)
 /// and returns the owner vertex.
 /// Will panic if the Constraint is not a Has constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_has_get_owner(constraint: *const ConstraintWithSpan) -> *mut ConstraintVertex {
+pub extern "C" fn constraint_has_get_owner(
+    constraint: *const ConstraintWithSpan,
+) -> *mut ConstraintVertex {
     let Constraint::Has { owner, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Has");
     };
@@ -697,7 +832,9 @@ pub extern "C" fn constraint_has_get_owner(constraint: *const ConstraintWithSpan
 /// and returns the attribute vertex.
 /// Will panic if the Constraint is not a Has constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_has_get_attribute(constraint: *const ConstraintWithSpan) -> *mut ConstraintVertex {
+pub extern "C" fn constraint_has_get_attribute(
+    constraint: *const ConstraintWithSpan,
+) -> *mut ConstraintVertex {
     let Constraint::Has { attribute, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Has");
     };
@@ -708,7 +845,9 @@ pub extern "C" fn constraint_has_get_attribute(constraint: *const ConstraintWith
 /// and returns the relation vertex.
 /// Will panic if the Constraint is not a Links constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_links_get_relation(constraint: *const ConstraintWithSpan) -> *mut ConstraintVertex {
+pub extern "C" fn constraint_links_get_relation(
+    constraint: *const ConstraintWithSpan,
+) -> *mut ConstraintVertex {
     let Constraint::Links { relation, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Links");
     };
@@ -719,7 +858,9 @@ pub extern "C" fn constraint_links_get_relation(constraint: *const ConstraintWit
 /// and returns the player vertex.
 /// Will panic if the Constraint is not a Links constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_links_get_player(constraint: *const ConstraintWithSpan) -> *mut ConstraintVertex {
+pub extern "C" fn constraint_links_get_player(
+    constraint: *const ConstraintWithSpan,
+) -> *mut ConstraintVertex {
     let Constraint::Links { player, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Links");
     };
@@ -730,7 +871,9 @@ pub extern "C" fn constraint_links_get_player(constraint: *const ConstraintWithS
 /// and returns the role vertex.
 /// Will panic if the Constraint is not a Links constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_links_get_role(constraint: *const ConstraintWithSpan) -> *mut ConstraintVertex {
+pub extern "C" fn constraint_links_get_role(
+    constraint: *const ConstraintWithSpan,
+) -> *mut ConstraintVertex {
     let Constraint::Links { role, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Links");
     };
@@ -741,7 +884,9 @@ pub extern "C" fn constraint_links_get_role(constraint: *const ConstraintWithSpa
 /// and returns the subtype vertex.
 /// Will panic if the Constraint is not a Sub constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_sub_get_subtype(constraint: *const ConstraintWithSpan) -> *mut ConstraintVertex {
+pub extern "C" fn constraint_sub_get_subtype(
+    constraint: *const ConstraintWithSpan,
+) -> *mut ConstraintVertex {
     let Constraint::Sub { subtype, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Sub");
     };
@@ -752,7 +897,9 @@ pub extern "C" fn constraint_sub_get_subtype(constraint: *const ConstraintWithSp
 /// and returns the supertype vertex.
 /// Will panic if the Constraint is not a Sub constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_sub_get_supertype(constraint: *const ConstraintWithSpan) -> *mut ConstraintVertex {
+pub extern "C" fn constraint_sub_get_supertype(
+    constraint: *const ConstraintWithSpan,
+) -> *mut ConstraintVertex {
     let Constraint::Sub { supertype, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Sub");
     };
@@ -763,7 +910,9 @@ pub extern "C" fn constraint_sub_get_supertype(constraint: *const ConstraintWith
 /// and returns the owner-type vertex.
 /// Will panic if the Constraint is not an Owns constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_owns_get_owner(constraint: *const ConstraintWithSpan) -> *mut ConstraintVertex {
+pub extern "C" fn constraint_owns_get_owner(
+    constraint: *const ConstraintWithSpan,
+) -> *mut ConstraintVertex {
     let Constraint::Owns { owner, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Owns");
     };
@@ -774,7 +923,9 @@ pub extern "C" fn constraint_owns_get_owner(constraint: *const ConstraintWithSpa
 /// and returns the attribute-type vertex.
 /// Will panic if the Constraint is not an Owns constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_owns_get_attribute(constraint: *const ConstraintWithSpan) -> *mut ConstraintVertex {
+pub extern "C" fn constraint_owns_get_attribute(
+    constraint: *const ConstraintWithSpan,
+) -> *mut ConstraintVertex {
     let Constraint::Owns { attribute, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Owns");
     };
@@ -785,7 +936,9 @@ pub extern "C" fn constraint_owns_get_attribute(constraint: *const ConstraintWit
 /// and returns the relation-type vertex.
 /// Will panic if the Constraint is not a Relates constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_relates_get_relation(constraint: *const ConstraintWithSpan) -> *mut ConstraintVertex {
+pub extern "C" fn constraint_relates_get_relation(
+    constraint: *const ConstraintWithSpan,
+) -> *mut ConstraintVertex {
     let Constraint::Relates { relation, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Relates");
     };
@@ -796,7 +949,9 @@ pub extern "C" fn constraint_relates_get_relation(constraint: *const ConstraintW
 /// and returns the role-type vertex.
 /// Will panic if the Constraint is not a Relates constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_relates_get_role(constraint: *const ConstraintWithSpan) -> *mut ConstraintVertex {
+pub extern "C" fn constraint_relates_get_role(
+    constraint: *const ConstraintWithSpan,
+) -> *mut ConstraintVertex {
     let Constraint::Relates { role, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Relates");
     };
@@ -807,7 +962,9 @@ pub extern "C" fn constraint_relates_get_role(constraint: *const ConstraintWithS
 /// and returns the player type vertex.
 /// Will panic if the Constraint is not a Plays constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_plays_get_player(constraint: *const ConstraintWithSpan) -> *mut ConstraintVertex {
+pub extern "C" fn constraint_plays_get_player(
+    constraint: *const ConstraintWithSpan,
+) -> *mut ConstraintVertex {
     let Constraint::Plays { player, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Plays");
     };
@@ -818,7 +975,9 @@ pub extern "C" fn constraint_plays_get_player(constraint: *const ConstraintWithS
 /// and returns the role-type vertex.
 /// Will panic if the Constraint is not a Plays constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_plays_get_role(constraint: *const ConstraintWithSpan) -> *mut ConstraintVertex {
+pub extern "C" fn constraint_plays_get_role(
+    constraint: *const ConstraintWithSpan,
+) -> *mut ConstraintVertex {
     let Constraint::Plays { role, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Plays");
     };
@@ -829,7 +988,9 @@ pub extern "C" fn constraint_plays_get_role(constraint: *const ConstraintWithSpa
 /// and returns the exactness of the type match.
 /// Will panic if the Constraint is not an Isa constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_isa_get_exactness(constraint: *const ConstraintWithSpan) -> ConstraintExactness {
+pub extern "C" fn constraint_isa_get_exactness(
+    constraint: *const ConstraintWithSpan,
+) -> ConstraintExactness {
     let Constraint::Isa { exactness, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Isa");
     };
@@ -841,7 +1002,9 @@ pub extern "C" fn constraint_isa_get_exactness(constraint: *const ConstraintWith
 /// and returns the exactness of the attribute match.
 /// Will panic if the Constraint is not a Has constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_has_get_exactness(constraint: *const ConstraintWithSpan) -> ConstraintExactness {
+pub extern "C" fn constraint_has_get_exactness(
+    constraint: *const ConstraintWithSpan,
+) -> ConstraintExactness {
     let Constraint::Has { exactness, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Has");
     };
@@ -853,7 +1016,9 @@ pub extern "C" fn constraint_has_get_exactness(constraint: *const ConstraintWith
 /// and returns the exactness of the role-type match.
 /// Will panic if the Constraint is not a Links constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_links_get_exactness(constraint: *const ConstraintWithSpan) -> ConstraintExactness {
+pub extern "C" fn constraint_links_get_exactness(
+    constraint: *const ConstraintWithSpan,
+) -> ConstraintExactness {
     let Constraint::Links { exactness, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Links");
     };
@@ -866,7 +1031,9 @@ pub extern "C" fn constraint_links_get_exactness(constraint: *const ConstraintWi
 /// else, (i.e. `sub`) the type itself and all subtypes are returned.
 /// Will panic if the Constraint is not a Sub constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_sub_get_exactness(constraint: *const ConstraintWithSpan) -> ConstraintExactness {
+pub extern "C" fn constraint_sub_get_exactness(
+    constraint: *const ConstraintWithSpan,
+) -> ConstraintExactness {
     let Constraint::Sub { exactness, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Sub");
     };
@@ -876,7 +1043,9 @@ pub extern "C" fn constraint_sub_get_exactness(constraint: *const ConstraintWith
 /// (FUTURE-USE: Currently always ConstraintExactness::Subtypes)
 /// Will panic if the Constraint is not an Owns constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_owns_get_exactness(constraint: *const ConstraintWithSpan) -> ConstraintExactness {
+pub extern "C" fn constraint_owns_get_exactness(
+    constraint: *const ConstraintWithSpan,
+) -> ConstraintExactness {
     let Constraint::Owns { exactness, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Owns");
     };
@@ -887,7 +1056,9 @@ pub extern "C" fn constraint_owns_get_exactness(constraint: *const ConstraintWit
 /// and returns the exactness of the relation match.
 /// Will panic if the Constraint is not a Relates constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_relates_get_exactness(constraint: *const ConstraintWithSpan) -> ConstraintExactness {
+pub extern "C" fn constraint_relates_get_exactness(
+    constraint: *const ConstraintWithSpan,
+) -> ConstraintExactness {
     let Constraint::Relates { exactness, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Relates");
     };
@@ -896,7 +1067,9 @@ pub extern "C" fn constraint_relates_get_exactness(constraint: *const Constraint
 
 /// (FUTURE-USE: Currently always ConstraintExactness::Subtypes)
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_plays_get_exactness(constraint: *const ConstraintWithSpan) -> ConstraintExactness {
+pub extern "C" fn constraint_plays_get_exactness(
+    constraint: *const ConstraintWithSpan,
+) -> ConstraintExactness {
     let Constraint::Plays { exactness, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Plays");
     };
@@ -907,7 +1080,9 @@ pub extern "C" fn constraint_plays_get_exactness(constraint: *const ConstraintWi
 /// and returns the function name.
 /// Will panic if the Constraint is not a FunctionCall constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_function_call_get_name(constraint: *const ConstraintWithSpan) -> *mut c_char {
+pub extern "C" fn constraint_function_call_get_name(
+    constraint: *const ConstraintWithSpan,
+) -> *mut c_char {
     let Constraint::FunctionCall { name, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be FunctionCall");
     };
@@ -924,7 +1099,9 @@ pub extern "C" fn constraint_function_call_get_assigned(
     let Constraint::FunctionCall { assigned, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be FunctionCall");
     };
-    release(ConstraintVertexIterator(CIterator(box_stream(assigned.clone().into_iter()))))
+    release(ConstraintVertexIterator(CIterator(box_stream(
+        assigned.clone().into_iter(),
+    ))))
 }
 
 /// Unwraps the <code>Constraint</code> instance as a `FunctionCall` constraint,
@@ -937,14 +1114,18 @@ pub extern "C" fn constraint_function_call_get_arguments(
     let Constraint::FunctionCall { arguments, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be FunctionCall");
     };
-    release(ConstraintVertexIterator(CIterator(box_stream(arguments.clone().into_iter()))))
+    release(ConstraintVertexIterator(CIterator(box_stream(
+        arguments.clone().into_iter(),
+    ))))
 }
 
 /// Unwraps the <code>Constraint</code> instance as an `Expression` constraint,
 /// and returns the expression text.
 /// Will panic if the Constraint is not an Expression constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_expression_get_text(constraint: *const ConstraintWithSpan) -> *mut c_char {
+pub extern "C" fn constraint_expression_get_text(
+    constraint: *const ConstraintWithSpan,
+) -> *mut c_char {
     let Constraint::Expression { text, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Expression");
     };
@@ -955,7 +1136,9 @@ pub extern "C" fn constraint_expression_get_text(constraint: *const ConstraintWi
 /// and returns the variable assigned by the expression.
 /// Will panic if the Constraint is not an Expression constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_expression_get_assigned(constraint: *const ConstraintWithSpan) -> *mut ConstraintVertex {
+pub extern "C" fn constraint_expression_get_assigned(
+    constraint: *const ConstraintWithSpan,
+) -> *mut ConstraintVertex {
     let Constraint::Expression { assigned, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Expression");
     };
@@ -973,14 +1156,18 @@ pub extern "C" fn constraint_expression_get_arguments(
     let Constraint::Expression { arguments, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Expression");
     };
-    release(ConstraintVertexIterator(CIterator(box_stream(arguments.clone().into_iter()))))
+    release(ConstraintVertexIterator(CIterator(box_stream(
+        arguments.clone().into_iter(),
+    ))))
 }
 
 /// Unwraps the <code>Constraint</code> instance as an `Is` constraint,
 /// and returns the left-hand side vertex.
 /// Will panic if the Constraint is not an Is constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_is_get_lhs(constraint: *const ConstraintWithSpan) -> *mut ConstraintVertex {
+pub extern "C" fn constraint_is_get_lhs(
+    constraint: *const ConstraintWithSpan,
+) -> *mut ConstraintVertex {
     let Constraint::Is { lhs, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Is");
     };
@@ -991,7 +1178,9 @@ pub extern "C" fn constraint_is_get_lhs(constraint: *const ConstraintWithSpan) -
 /// and returns the right-hand side vertex.
 /// Will panic if the Constraint is not an Is constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_is_get_rhs(constraint: *const ConstraintWithSpan) -> *mut ConstraintVertex {
+pub extern "C" fn constraint_is_get_rhs(
+    constraint: *const ConstraintWithSpan,
+) -> *mut ConstraintVertex {
     let Constraint::Is { rhs, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Is");
     };
@@ -1002,7 +1191,9 @@ pub extern "C" fn constraint_is_get_rhs(constraint: *const ConstraintWithSpan) -
 /// and returns the concept (variable) the iid applies to.
 /// Will panic if the Constraint is not an Iid constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_iid_get_variable(constraint: *const ConstraintWithSpan) -> *mut ConstraintVertex {
+pub extern "C" fn constraint_iid_get_variable(
+    constraint: *const ConstraintWithSpan,
+) -> *mut ConstraintVertex {
     let Constraint::Iid { concept, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Iid");
     };
@@ -1030,14 +1221,18 @@ pub extern "C" fn constraint_delete_concepts_get_variables(
     let Constraint::DeleteConcepts { variables, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be DeleteConcepts");
     };
-    release(ConstraintVertexIterator(CIterator(box_stream(variables.clone().into_iter()))))
+    release(ConstraintVertexIterator(CIterator(box_stream(
+        variables.clone().into_iter(),
+    ))))
 }
 
 /// Unwraps the <code>Constraint</code> instance as a `Comparison` constraint,
 /// and returns the left-hand side vertex.
 /// Will panic if the Constraint is not a Comparison constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_comparison_get_lhs(constraint: *const ConstraintWithSpan) -> *mut ConstraintVertex {
+pub extern "C" fn constraint_comparison_get_lhs(
+    constraint: *const ConstraintWithSpan,
+) -> *mut ConstraintVertex {
     let Constraint::Comparison { lhs, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Comparison");
     };
@@ -1048,7 +1243,9 @@ pub extern "C" fn constraint_comparison_get_lhs(constraint: *const ConstraintWit
 /// and returns the right-hand side vertex.
 /// Will panic if the Constraint is not a Comparison constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_comparison_get_rhs(constraint: *const ConstraintWithSpan) -> *mut ConstraintVertex {
+pub extern "C" fn constraint_comparison_get_rhs(
+    constraint: *const ConstraintWithSpan,
+) -> *mut ConstraintVertex {
     let Constraint::Comparison { rhs, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Comparison");
     };
@@ -1059,7 +1256,9 @@ pub extern "C" fn constraint_comparison_get_rhs(constraint: *const ConstraintWit
 /// and returns the comparator used in the comparison.
 /// Will panic if the Constraint is not a Comparison constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_comparison_get_comparator(constraint: *const ConstraintWithSpan) -> Comparator {
+pub extern "C" fn constraint_comparison_get_comparator(
+    constraint: *const ConstraintWithSpan,
+) -> Comparator {
     let Constraint::Comparison { comparator, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Comparison");
     };
@@ -1087,7 +1286,9 @@ pub extern "C" fn constraint_kind_get_kind(constraint: *const ConstraintWithSpan
 /// and returns the associated type vertex.
 /// Will panic if the Constraint is not a Kind constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_kind_get_type(constraint: *const ConstraintWithSpan) -> *mut ConstraintVertex {
+pub extern "C" fn constraint_kind_get_type(
+    constraint: *const ConstraintWithSpan,
+) -> *mut ConstraintVertex {
     let Constraint::Kind { r#type: type_, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Kind");
     };
@@ -1098,7 +1299,9 @@ pub extern "C" fn constraint_kind_get_type(constraint: *const ConstraintWithSpan
 /// and returns the type-vertex the label applies to.
 /// Will panic if the Constraint is not a Label constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_label_get_variable(constraint: *const ConstraintWithSpan) -> *mut ConstraintVertex {
+pub extern "C" fn constraint_label_get_variable(
+    constraint: *const ConstraintWithSpan,
+) -> *mut ConstraintVertex {
     let Constraint::Label { r#type: type_, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Label");
     };
@@ -1120,7 +1323,9 @@ pub extern "C" fn constraint_label_get_label(constraint: *const ConstraintWithSp
 /// and returns the attribute type vertex.
 /// Will panic if the Constraint is not a Value constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_value_get_attribute_type(constraint: *const ConstraintWithSpan) -> *mut ConstraintVertex {
+pub extern "C" fn constraint_value_get_attribute_type(
+    constraint: *const ConstraintWithSpan,
+) -> *mut ConstraintVertex {
     let Constraint::Value { attribute_type, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Value");
     };
@@ -1131,7 +1336,9 @@ pub extern "C" fn constraint_value_get_attribute_type(constraint: *const Constra
 /// and returns the specified ValueType as a string.
 /// Will panic if the Constraint is not a Value constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_value_get_value_type(constraint: *const ConstraintWithSpan) -> *mut c_char {
+pub extern "C" fn constraint_value_get_value_type(
+    constraint: *const ConstraintWithSpan,
+) -> *mut c_char {
     let Constraint::Value { value_type, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Value");
     };
@@ -1142,29 +1349,39 @@ pub extern "C" fn constraint_value_get_value_type(constraint: *const ConstraintW
 /// and returns the specified variables.
 /// Will panic if the Constraint is not a IsSet constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_isset_get_variables(constraint: *const ConstraintWithSpan) -> *mut ConstraintVertexIterator {
+pub extern "C" fn constraint_isset_get_variables(
+    constraint: *const ConstraintWithSpan,
+) -> *mut ConstraintVertexIterator {
     let Constraint::IsSet { variables } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be IsSet");
     };
-    release(ConstraintVertexIterator(CIterator(box_stream(variables.clone().into_iter()))))
+    release(ConstraintVertexIterator(CIterator(box_stream(
+        variables.clone().into_iter(),
+    ))))
 }
 
 /// Unwraps the <code>Constraint</code> instance as an `Or` constraint,
 /// and returns the <code>ConjunctionID</code>s of the conjunction in each of the branches.
 /// Will panic if the Constraint is not an Or constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_or_get_branches(constraint: *const ConstraintWithSpan) -> *mut ConjunctionIDIterator {
+pub extern "C" fn constraint_or_get_branches(
+    constraint: *const ConstraintWithSpan,
+) -> *mut ConjunctionIDIterator {
     let Constraint::Or { branches, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Or");
     };
-    release(ConjunctionIDIterator(CIterator(box_stream(branches.clone().into_iter()))))
+    release(ConjunctionIDIterator(CIterator(box_stream(
+        branches.clone().into_iter(),
+    ))))
 }
 
 /// Unwraps the <code>Constraint</code> instance as a `Not` constraint,
 /// and returns the <code>ConjunctionID</code> of the negated conjunction.
 /// Will panic if the Constraint is not a Not constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_not_get_conjunction(constraint: *const ConstraintWithSpan) -> *mut ConjunctionID {
+pub extern "C" fn constraint_not_get_conjunction(
+    constraint: *const ConstraintWithSpan,
+) -> *mut ConjunctionID {
     let Constraint::Not { conjunction, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Not");
     };
@@ -1175,7 +1392,9 @@ pub extern "C" fn constraint_not_get_conjunction(constraint: *const ConstraintWi
 /// and returns the <code>ConjunctionID</code> of the optionally matched conjunction.
 /// Will panic if the Constraint is not a Try constraint.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_try_get_conjunction(constraint: *const ConstraintWithSpan) -> *mut ConjunctionID {
+pub extern "C" fn constraint_try_get_conjunction(
+    constraint: *const ConstraintWithSpan,
+) -> *mut ConjunctionID {
     let Constraint::Try { conjunction, .. } = &borrow(constraint).constraint else {
         unreachable!("Expected constraint to be Try");
     };
@@ -1191,7 +1410,9 @@ pub extern "C" fn constraint_string_repr(constraint: *const ConstraintWithSpan) 
 // ConstraintVertex accessors
 /// Returns the variant of the constraint
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_vertex_variant(vertex: *const ConstraintVertex) -> ConstraintVertexVariant {
+pub extern "C" fn constraint_vertex_variant(
+    vertex: *const ConstraintVertex,
+) -> ConstraintVertexVariant {
     match borrow(vertex) {
         ConstraintVertex::Variable(_) => ConstraintVertexVariant::VariableVertex,
         ConstraintVertex::Label(_) => ConstraintVertexVariant::LabelVertex,
@@ -1238,7 +1459,9 @@ pub extern "C" fn constraint_vertex_as_value(vertex: *const ConstraintVertex) ->
 ///  an internal variable is introduced to handle the ambiguity
 /// Will panic if the instance is not a NamedRole variant.
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_vertex_as_named_role(vertex: *const ConstraintVertex) -> *mut NamedRole {
+pub extern "C" fn constraint_vertex_as_named_role(
+    vertex: *const ConstraintVertex,
+) -> *mut NamedRole {
     match borrow(vertex) {
         ConstraintVertex::NamedRole(named_role) => release(named_role.clone()),
         _ => unreachable!(),
@@ -1284,7 +1507,9 @@ pub extern "C" fn function_iterator_drop(it: *mut FunctionIterator) {
 
 #[doc = "Forwards the <code>ConjunctionIDIterator</code> and returns the next <code>ConjunctionID</code> if it exists, or null if there are no more elements."]
 #[unsafe(no_mangle)]
-pub extern "C" fn conjunction_id_iterator_next(it: *mut ConjunctionIDIterator) -> *mut ConjunctionID {
+pub extern "C" fn conjunction_id_iterator_next(
+    it: *mut ConjunctionIDIterator,
+) -> *mut ConjunctionID {
     unsafe { iterator_next(addr_of_mut!((*it).0)) }
 }
 
@@ -1296,7 +1521,9 @@ pub extern "C" fn conjunction_id_iterator_drop(it: *mut ConjunctionIDIterator) {
 
 #[doc = "Forwards the <code>ConstraintWithSpanIterator</code> and returns the next <code>ConstraintWithSpan</code> if it exists, or null if there are no more elements."]
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_with_span_iterator_next(it: *mut ConstraintWithSpanIterator) -> *mut ConstraintWithSpan {
+pub extern "C" fn constraint_with_span_iterator_next(
+    it: *mut ConstraintWithSpanIterator,
+) -> *mut ConstraintWithSpan {
     unsafe { iterator_next(addr_of_mut!((*it).0)) }
 }
 
@@ -1308,7 +1535,9 @@ pub extern "C" fn constraint_with_span_iterator_drop(it: *mut ConstraintWithSpan
 
 #[doc = "Forwards the <code>ConstraintVertexIterator</code> and returns the next <code>ConstraintVertex</code> if it exists, or null if there are no more elements."]
 #[unsafe(no_mangle)]
-pub extern "C" fn constraint_vertex_iterator_next(it: *mut ConstraintVertexIterator) -> *mut ConstraintVertex {
+pub extern "C" fn constraint_vertex_iterator_next(
+    it: *mut ConstraintVertexIterator,
+) -> *mut ConstraintVertex {
     unsafe { iterator_next(addr_of_mut!((*it).0)) }
 }
 
@@ -1320,7 +1549,9 @@ pub extern "C" fn constraint_vertex_iterator_drop(it: *mut ConstraintVertexItera
 
 #[doc = "Forwards the <code>PipelineStageIterator</code> and returns the next <code>PipelineStage</code> if it exists, or null if there are no more elements."]
 #[unsafe(no_mangle)]
-pub extern "C" fn pipeline_stage_iterator_next(it: *mut PipelineStageIterator) -> *mut PipelineStage {
+pub extern "C" fn pipeline_stage_iterator_next(
+    it: *mut PipelineStageIterator,
+) -> *mut PipelineStage {
     unsafe { iterator_next(addr_of_mut!((*it).0)) }
 }
 
@@ -1332,7 +1563,9 @@ pub extern "C" fn sort_variable_iterator_drop(it: *mut SortVariableIterator) {
 
 #[doc = "Forwards the <code>ReduceAssignmentIterator</code> and returns the next <code>ReduceAssignment</code> if it exists, or null if there are no more elements."]
 #[unsafe(no_mangle)]
-pub extern "C" fn reduce_assignment_iterator_next(it: *mut ReduceAssignmentIterator) -> *mut ReduceAssignment {
+pub extern "C" fn reduce_assignment_iterator_next(
+    it: *mut ReduceAssignmentIterator,
+) -> *mut ReduceAssignment {
     unsafe { iterator_next(addr_of_mut!((*it).0)) }
 }
 
@@ -1368,7 +1601,9 @@ pub extern "C" fn sort_variable_iterator_next(it: *mut SortVariableIterator) -> 
 
 #[doc = "Forwards the <code>VariableAnnotationsIterator</code> and returns the next <code>VariableAnnotations</code> if it exists, or null if there are no more elements."]
 #[unsafe(no_mangle)]
-pub extern "C" fn variable_annotations_iterator_next(it: *mut VariableAnnotationsIterator) -> *mut VariableAnnotations {
+pub extern "C" fn variable_annotations_iterator_next(
+    it: *mut VariableAnnotationsIterator,
+) -> *mut VariableAnnotations {
     unsafe { iterator_next(addr_of_mut!((*it).0)) }
 }
 

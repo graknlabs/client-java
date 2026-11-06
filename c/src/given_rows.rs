@@ -27,8 +27,8 @@ use typedb_driver::{
 use crate::common::{
     error::{try_release, unwrap_void},
     memory::{
-        borrow, borrow_mut, decrement_arc, free, release, release_arc, release_optional, string_view, take_arc,
-        take_ownership,
+        borrow, borrow_mut, decrement_arc, free, release, release_arc, release_optional,
+        string_view, take_arc, take_ownership,
     },
 };
 // We use builders to make the FFI directives simpler.
@@ -45,7 +45,9 @@ pub struct GivenRowsBuilder {
 impl GivenRowsBuilder {
     fn active_row(&mut self) -> typedb_driver::Result<&mut GivenRow> {
         self.active_row.as_mut().ok_or_else(|| {
-            typedb_driver::error::Error::FFI("given_rows_builder_commit_row: No active row found".to_owned())
+            typedb_driver::error::Error::FFI(
+                "given_rows_builder_commit_row: No active row found".to_owned(),
+            )
         })
     }
 
@@ -69,11 +71,14 @@ fn to_given_row_entry(
         Concept::Relation(relation) => Ok(GivenRowEntry::Relation(relation)),
         Concept::Attribute(attribute) => Ok(GivenRowEntry::Attribute(attribute)),
         Concept::Value(value) => Ok(GivenRowEntry::Value(value)),
-        Concept::EntityType(_) | Concept::RelationType(_) | Concept::RoleType(_) | Concept::AttributeType(_) => {
-            Err(typedb_driver::error::Error::Query(QueryError::GivenRowsReceivedType {
+        Concept::EntityType(_)
+        | Concept::RelationType(_)
+        | Concept::RoleType(_)
+        | Concept::AttributeType(_) => Err(typedb_driver::error::Error::Query(
+            QueryError::GivenRowsReceivedType {
                 variable_or_index: format!("{variable_or_index}"),
-            }))
-        }
+            },
+        )),
     }
 }
 
@@ -85,13 +90,18 @@ pub extern "C" fn given_rows_header_builder_new(width: usize) -> *mut GivenRowsH
 
 /// Adds a variable to the header being built by this <code>GivenRowsHeaderBuilder</code>
 #[unsafe(no_mangle)]
-pub extern "C" fn given_rows_header_builder_push(builder: *mut GivenRowsHeaderBuilder, variable: *mut c_char) {
+pub extern "C" fn given_rows_header_builder_push(
+    builder: *mut GivenRowsHeaderBuilder,
+    variable: *mut c_char,
+) {
     borrow_mut(builder).0.push(string_view(variable).to_owned())
 }
 
 /// Converts the builder into a finished <code>GivenRowsHeader</code> consisting of the pushed variables.
 #[unsafe(no_mangle)]
-pub extern "C" fn given_rows_header_builder_finish(builder: *mut GivenRowsHeaderBuilder) -> *const GivenRowsHeader {
+pub extern "C" fn given_rows_header_builder_finish(
+    builder: *mut GivenRowsHeaderBuilder,
+) -> *const GivenRowsHeader {
     release_arc(Arc::new(GivenRowsHeader::new(take_ownership(builder).0)))
 }
 
@@ -120,7 +130,9 @@ pub extern "C" fn given_rows_builder_commit_row(builder: *mut GivenRowsBuilder) 
     let builder = borrow_mut(builder);
     unwrap_void(match builder.active_row.take() {
         Some(row) => builder.rows.push(row),
-        None => Err(typedb_driver::error::Error::FFI("given_rows_builder_commit_row: No active row found".to_owned())),
+        None => Err(typedb_driver::error::Error::FFI(
+            "given_rows_builder_commit_row: No active row found".to_owned(),
+        )),
     });
 }
 
@@ -151,21 +163,32 @@ pub extern "C" fn given_rows_builder_set_variable_to_concept(
 ) {
     let result = borrow_mut(builder).active_row().and_then(|mut row| {
         let var_name = string_view(variable);
-        row.set(var_name.to_owned(), to_given_row_entry(borrow(concept), var_name)?)
+        row.set(
+            var_name.to_owned(),
+            to_given_row_entry(borrow(concept), var_name)?,
+        )
     });
     unwrap_void(result);
 }
 
 /// Sets the entry at `index` in the given row to the Empty Optional value
 #[unsafe(no_mangle)]
-pub extern "C" fn given_rows_builder_set_index_to_empty(builder: *mut GivenRowsBuilder, index: usize) {
-    let result = borrow_mut(builder).active_row().and_then(|mut row| row.set_at(index, GivenRowEntry::Empty));
+pub extern "C" fn given_rows_builder_set_index_to_empty(
+    builder: *mut GivenRowsBuilder,
+    index: usize,
+) {
+    let result = borrow_mut(builder)
+        .active_row()
+        .and_then(|mut row| row.set_at(index, GivenRowEntry::Empty));
     unwrap_void(result);
 }
 
 /// Sets the entry for `variable` in the given row to the Empty optional value
 #[unsafe(no_mangle)]
-pub extern "C" fn given_rows_builder_set_variable_to_empty(builder: *mut GivenRowsBuilder, variable: *const c_char) {
+pub extern "C" fn given_rows_builder_set_variable_to_empty(
+    builder: *mut GivenRowsBuilder,
+    variable: *const c_char,
+) {
     let result = borrow_mut(builder).active_row().and_then(|mut row| {
         let var_name = string_view(variable);
         row.set(var_name.to_owned(), GivenRowEntry::Empty)

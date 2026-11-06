@@ -48,7 +48,12 @@ pub extern "C" fn user_iterator_drop(it: *mut UserIterator) {
 /// @param driver The <code>TypeDBDriver</code> object.
 #[unsafe(no_mangle)]
 pub extern "C" fn users_all(driver: *const TypeDBDriver) -> *mut UserIterator {
-    try_release(borrow(driver).users().all().map(|users| UserIterator(CIterator(box_stream(users.into_iter())))))
+    try_release(
+        borrow(driver)
+            .users()
+            .all()
+            .map(|users| UserIterator(CIterator(box_stream(users.into_iter())))),
+    )
 }
 
 /// Checks if a user with the given name exists.
@@ -66,7 +71,12 @@ pub extern "C" fn users_contains(driver: *const TypeDBDriver, username: *const c
 /// @param username The username of the user.
 #[unsafe(no_mangle)]
 pub extern "C" fn users_get(driver: *const TypeDBDriver, username: *const c_char) -> *mut User {
-    try_release_optional(borrow(driver).users().get(string_view(username)).transpose())
+    try_release_optional(
+        borrow(driver)
+            .users()
+            .get(string_view(username))
+            .transpose(),
+    )
 }
 
 /// Retrieves the username of the user who opened this connection.
@@ -82,6 +92,14 @@ pub extern "C" fn users_get_current(driver: *const TypeDBDriver) -> *mut User {
 /// @param username The username of the created user.
 /// @param password The password of the created user.
 #[unsafe(no_mangle)]
-pub extern "C" fn users_create(driver: *const TypeDBDriver, username: *const c_char, password: *const c_char) {
-    unwrap_void(borrow(driver).users().create(string_view(username), string_view(password)));
+pub extern "C" fn users_create(
+    driver: *const TypeDBDriver,
+    username: *const c_char,
+    password: *const c_char,
+) {
+    unwrap_void(
+        borrow(driver)
+            .users()
+            .create(string_view(username), string_view(password)),
+    );
 }

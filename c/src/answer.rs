@@ -33,7 +33,9 @@ use crate::{
         StringIterator,
         error::{try_release, try_release_optional},
         iterator::CIterator,
-        memory::{borrow, free, release, release_optional, release_string, string_view, take_ownership},
+        memory::{
+            borrow, free, release, release_optional, release_string, string_view, take_ownership,
+        },
     },
     concept::{ConceptIterator, ConceptRowIterator},
 };
@@ -52,7 +54,9 @@ impl QueryAnswerPromise {
 /// In case the operation failed, the error flag will only be set when the promise is resolved.
 /// The native promise object is freed when it is resolved.
 #[unsafe(no_mangle)]
-pub extern "C" fn query_answer_promise_resolve(promise: *mut QueryAnswerPromise) -> *mut QueryAnswer {
+pub extern "C" fn query_answer_promise_resolve(
+    promise: *mut QueryAnswerPromise,
+) -> *mut QueryAnswer {
     try_release(take_ownership(promise).0.resolve())
 }
 
@@ -82,19 +86,27 @@ pub extern "C" fn query_answer_is_concept_row_stream(query_answer: *const QueryA
 
 /// Checks if the query answer is a <code>ConceptDocumentStream</code>.
 #[unsafe(no_mangle)]
-pub extern "C" fn query_answer_is_concept_document_stream(query_answer: *const QueryAnswer) -> bool {
+pub extern "C" fn query_answer_is_concept_document_stream(
+    query_answer: *const QueryAnswer,
+) -> bool {
     borrow(query_answer).is_document_stream()
 }
 
 /// Produces an <code>Iterator</code> over all <code>ConceptRow</code>s in this <code>QueryAnswer</code>.
 #[unsafe(no_mangle)]
-pub extern "C" fn query_answer_into_rows(query_answer: *mut QueryAnswer) -> *mut ConceptRowIterator {
-    release(ConceptRowIterator(CIterator(take_ownership(query_answer).into_rows())))
+pub extern "C" fn query_answer_into_rows(
+    query_answer: *mut QueryAnswer,
+) -> *mut ConceptRowIterator {
+    release(ConceptRowIterator(CIterator(
+        take_ownership(query_answer).into_rows(),
+    )))
 }
 
 /// Produces an <code>Iterator</code> over all JSON <code>ConceptDocument</code>s in this <code>QueryAnswer</code>.
 #[unsafe(no_mangle)]
-pub extern "C" fn query_answer_into_documents(query_answer: *mut QueryAnswer) -> *mut StringIterator {
+pub extern "C" fn query_answer_into_documents(
+    query_answer: *mut QueryAnswer,
+) -> *mut StringIterator {
     release(StringIterator(CIterator(box_stream(
         take_ownership(query_answer)
             .into_documents()
@@ -116,8 +128,16 @@ pub extern "C" fn concept_row_drop(concept_row: *mut ConceptRow) {
 
 /// Produces an <code>Iterator</code> over all <code>String</code> column names of the <code>ConceptRow</code>'s header.
 #[unsafe(no_mangle)]
-pub extern "C" fn concept_row_get_column_names(concept_row: *const ConceptRow) -> *mut StringIterator {
-    release(StringIterator(CIterator(box_stream(borrow(concept_row).get_column_names().iter().cloned().map(Ok)))))
+pub extern "C" fn concept_row_get_column_names(
+    concept_row: *const ConceptRow,
+) -> *mut StringIterator {
+    release(StringIterator(CIterator(box_stream(
+        borrow(concept_row)
+            .get_column_names()
+            .iter()
+            .cloned()
+            .map(Ok),
+    ))))
 }
 
 /// Retrieves the executed query's structure from the <code>ConceptRow</code>'s header, if set.
@@ -136,26 +156,48 @@ pub extern "C" fn concept_row_get_query_type(concept_row: *const ConceptRow) -> 
 /// Produces an <code>Iterator</code> over all <code>Concepts</code> in this <code>ConceptRow</code>.
 #[unsafe(no_mangle)]
 pub extern "C" fn concept_row_get_concepts(concept_row: *const ConceptRow) -> *mut ConceptIterator {
-    release(ConceptIterator(CIterator(box_stream(borrow(concept_row).get_concepts().cloned().map(Ok)))))
+    release(ConceptIterator(CIterator(box_stream(
+        borrow(concept_row).get_concepts().cloned().map(Ok),
+    ))))
 }
 
 /// Retrieves a concept for a given column name.
 #[unsafe(no_mangle)]
-pub extern "C" fn concept_row_get(concept_row: *const ConceptRow, column_name: *const c_char) -> *mut Concept {
-    try_release_optional(borrow(concept_row).get(string_view(column_name)).map(|concept| concept.cloned()).transpose())
+pub extern "C" fn concept_row_get(
+    concept_row: *const ConceptRow,
+    column_name: *const c_char,
+) -> *mut Concept {
+    try_release_optional(
+        borrow(concept_row)
+            .get(string_view(column_name))
+            .map(|concept| concept.cloned())
+            .transpose(),
+    )
 }
 
 /// Retrieves a concept for a given column index.
 #[unsafe(no_mangle)]
-pub extern "C" fn concept_row_get_index(concept_row: *const ConceptRow, column_index: usize) -> *mut Concept {
-    try_release_optional(borrow(concept_row).get_index(column_index).map(|concept| concept.cloned()).transpose())
+pub extern "C" fn concept_row_get_index(
+    concept_row: *const ConceptRow,
+    column_index: usize,
+) -> *mut Concept {
+    try_release_optional(
+        borrow(concept_row)
+            .get_index(column_index)
+            .map(|concept| concept.cloned())
+            .transpose(),
+    )
 }
 
 /// Retrieve the <code>ConjunctionID</code>s of <code>Conjunction</code>s that answered this row.
 /// May be null.
 #[unsafe(no_mangle)]
-pub extern "C" fn concept_row_involved_conjunctions(concept_row: *const ConceptRow) -> *mut ConjunctionIDIterator {
-    let iter_opt = borrow(concept_row).clone().get_involved_conjunctions_cloned();
+pub extern "C" fn concept_row_involved_conjunctions(
+    concept_row: *const ConceptRow,
+) -> *mut ConjunctionIDIterator {
+    let iter_opt = borrow(concept_row)
+        .clone()
+        .get_involved_conjunctions_cloned();
     release_optional(iter_opt.map(|iter| ConjunctionIDIterator(CIterator(box_stream(iter)))))
 }
 
