@@ -76,8 +76,10 @@ function isOriginFailure(value: TryResult | SignInResult): value is OriginFailur
 // the same way.
 function tokenErrToResult(tokenResp: ApiErrorResponse, origin: string): ApiErrorResponse | OriginFailure {
     const { code, message } = tokenResp.err;
-    if (!TRANSIENT_SIGNIN_ERROR_CODES.has(code)) return tokenResp;
-    return { failure: `Server at ${origin} failed signin with [${code}] ${message}` };
+    if (TRANSIENT_SIGNIN_ERROR_CODES.has(code))
+        return { failure: `Server at ${origin} failed signin with [${code}] ${message}` };
+    else
+        return tokenResp;
 }
 
 function errorMessage(error: unknown): string {

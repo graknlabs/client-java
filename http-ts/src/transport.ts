@@ -35,7 +35,7 @@ type HttpsClient = { https: typeof NodeHttps, agent: NodeHttps.Agent };
 const CONNECT_TIMEOUT_MILLIS = 10_000;
 const REQUEST_INACTIVITY_TIMEOUT_MILLIS = 300_000;
 const KEEP_ALIVE_SOCKET_TIMEOUT_MILLIS = 5_000;
-const PEM_CERTIFICATE_REGEX = /-----BEGIN (TRUSTED )?CERTIFICATE-----[\s\S]*?-----END \1CERTIFICATE-----/g;
+const PEM_CERTIFICATE_REGEX = /-----BEGIN (TRUSTED )?CERTIFICATE-----.*?-----END \1CERTIFICATE-----/gs;
 
 export class TlsConfigError extends Error {}
 
@@ -44,6 +44,7 @@ export function createFetch(tls: DriverTlsConfig | undefined, origins: string[])
     if (rootCAPath === undefined) return (url, init) => fetch(url, init);
     const plainOrigin = origins.find((origin) => !isHttps(origin));
     const plainOriginError = plainOrigin === undefined ? undefined : plainHttpError(plainOrigin);
+    // Shared by every request of this driver. If creating it fails, the next request tries again.
     let httpsClient: Promise<HttpsClient> | undefined;
     return async (url, init) => {
         if (plainOriginError !== undefined) throw plainOriginError;

@@ -103,12 +103,12 @@ SECONDARY_MAX_RETRIES=60
 if [ "$NODE_COUNT" -gt 1 ]; then
   for attempt in $(seq 1 $SECONDARY_MAX_RETRIES); do
     voters=$(./1/typedb admin --socket-path=./1/data/admin.sock --command "servers status" 2>&1 |
-      awk -F'|' '{ gsub(/ /, "", $3) } $3 == "primary" || $3 == "secondary" { n++ } END { print n + 0 }')
+      awk -F'|' 'BEGIN { n = 0 } $3 ~ /primary|secondary/ { n++ } END { print n }')
     if [ "$voters" -eq "$NODE_COUNT" ]; then
       break
     fi
     if [ "$attempt" -eq "$SECONDARY_MAX_RETRIES" ]; then
-      echo "Replicas did not become secondaries after ${SECONDARY_MAX_RETRIES} seconds"
+      echo "Replicas did not become secondaries after ${SECONDARY_MAX_RETRIES} attempts"
       ./1/typedb admin --socket-path=./1/data/admin.sock --command "servers status"
       exit 1
     fi
