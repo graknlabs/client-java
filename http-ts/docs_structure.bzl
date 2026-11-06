@@ -91,6 +91,7 @@ dir_mapping = {
     "ConstraintIs.adoc": "analyze",
     "ConstraintIsa.adoc": "analyze",
     "ConstraintIsaExact.adoc": "analyze",
+    "ConstraintIsSet.adoc": "analyze",
     "ConstraintKind.adoc": "analyze",
     "ConstraintLabel.adoc": "analyze",
     "ConstraintLinks.adoc": "analyze",

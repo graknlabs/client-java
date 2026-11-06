@@ -123,6 +123,22 @@ Casts this constraint to an is constraint.
 .Returns
 `IIs`
 
+[#_IIsSet_TypeDB_Driver_Api_Analyze_IConstraint_AsIsSet_]
+==== method ``AsIsSet``
+
+[source,cs]
+----
+IIsSet AsIsSet()
+----
+
+
+
+Casts this constraint to an isset constraint.
+
+[caption=""]
+.Returns
+`IIsSet`
+
 [#_IIsa_TypeDB_Driver_Api_Analyze_IConstraint_AsIsa_]
 ==== method ``AsIsa``
 
@@ -422,6 +438,22 @@ bool TypeDB.Driver.Api.Analyze.IConstraint.IsIs
 
 
 Checks if this constraint is an is constraint.
+
+[caption=""]
+.Returns
+`bool`
+
+[#_bool_TypeDB_Driver_Api_Analyze_IConstraint_IsIsSet]
+==== method ``IsIsSet``
+
+[source,cs]
+----
+bool TypeDB.Driver.Api.Analyze.IConstraint.IsIsSet
+----
+
+
+
+Checks if this constraint is an isset constraint.
 
 [caption=""]
 .Returns

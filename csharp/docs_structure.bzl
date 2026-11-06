@@ -40,6 +40,7 @@ dir_mapping = {
     "IInsertStage.adoc": "analyze",
     "IIs.adoc": "analyze",
     "IIsa.adoc": "analyze",
+    "IIsSet.adoc": "analyze",
     "IKind.adoc": "analyze",
     "ILabelConstraint.adoc": "analyze",
     "ILimitStage.adoc": "analyze",

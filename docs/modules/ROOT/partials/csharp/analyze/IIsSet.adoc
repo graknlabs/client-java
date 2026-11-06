@@ -1,0 +1,35 @@
+[#_IIsSet]
+[.doc-api-reference-driver]
+=== IIsSet
+
+`class`
+
+*Package*: `TypeDB.Driver.Api.Analyze`
+
+*Supertypes:*
+
+* `TypeDB.Driver.Api.Analyze.IConstraint`
+
+
+
+Represents an isset constraint: isset variables.
+
+// tag::methods[]
+[#_IEnumerable_IConstraintVertex_TypeDB_Driver_Api_Analyze_IIsSet_Variables]
+==== method ``Variables``
+
+[source,cs]
+----
+IEnumerable< IConstraintVertex > TypeDB.Driver.Api.Analyze.IIsSet.Variables
+----
+
+
+
+The variables being checked.
+
+[caption=""]
+.Returns
+`IEnumerable< IConstraintVertex >`
+
+// end::methods[]
+
