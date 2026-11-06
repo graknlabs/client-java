@@ -30,9 +30,18 @@ namespace TypeDB.Driver.Test.TestRunner
     public static class FeatureFileFilter
     {
         private const string IgnoreTag = "@ignore-typedb-driver-csharp";
+        private const string ClusterIgnoreTag = "@ignore-typedb-driver-cluster";
+
+        // Defined by the cluster test rule, so that cluster-only exclusions apply to that run alone.
+#if TYPEDB_CLUSTER_MODE
+        private const bool IsClusterMode = true;
+#else
+        private const bool IsClusterMode = false;
+#endif
 
         private static readonly Dictionary<string, string> FilteredFeatures = new Dictionary<string, string>
         {
+            { "external/typedb_behaviour+/driver/connection.feature", "connection.csharp.feature" },
             { "external/typedb_behaviour+/driver/migration.feature", "migration.csharp.feature" },
         };
 
@@ -71,7 +80,7 @@ namespace TypeDB.Driver.Test.TestRunner
         private static void FlushBlock(StringBuilder filtered, StringBuilder block)
         {
             var content = block.ToString();
-            if (!content.Contains(IgnoreTag))
+            if (!content.Contains(IgnoreTag) && !(IsClusterMode && content.Contains(ClusterIgnoreTag)))
             {
                 filtered.Append(content);
             }

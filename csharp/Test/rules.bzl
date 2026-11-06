@@ -49,6 +49,7 @@ def csharp_behaviour_test_cluster(name, test_files, step_files, features, deps, 
         target_frameworks = target_frameworks,
         targeting_packs = targeting_packs,
         add_certificates = True,
+        defines = ["TYPEDB_CLUSTER_MODE"],
         **kwargs,
     )
 

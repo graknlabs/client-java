@@ -24,6 +24,7 @@ from typedb.driver import *
 
 
 def before_all(context: Context):
+    environment_base.IGNORE_TAGS.append("ignore-typedb-driver-cluster")
     environment_base.before_all(context)
     context.tls_root_ca_path = os.environ["ROOT_CA"]
     context.create_driver_fn = lambda address=None, user=None, password=None: \

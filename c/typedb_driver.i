@@ -263,6 +263,7 @@ VoidPromise* transaction_on_close_register(const Transaction* transaction, Trans
 %newobject driver_new;
 %newobject driver_new_with_addresses;
 %newobject driver_new_with_address_translation;
+%newobject driver_new_with_connection_string;
 %newobject driver_server_version;
 %newobject driver_primary_server;
 %newobject driver_servers;

@@ -69,15 +69,6 @@ rust_test(
 )
 
 rust_test(
-    name = "test_connection_string_connect",
-    srcs = ["connection_string_connect.rs"],
-    deps = [
-        "//rust:typedb_driver",
-        "@crates//:async-std",
-    ],
-)
-
-rust_test(
     name = "test_values",
     srcs = ["values.rs"],
     deps = [

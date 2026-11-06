@@ -26,8 +26,10 @@ import com.typedb.driver.api.DriverTlsConfig;
 import com.typedb.driver.test.behaviour.config.Parameters;
 import io.cucumber.java.After;
 import io.cucumber.java.Before;
+import io.cucumber.java.Scenario;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
+import org.junit.Assume;
 
 import java.util.List;
 import java.util.Set;
@@ -41,6 +43,13 @@ public class ConnectionStepsCluster extends ConnectionStepsBase {
     @Override
     public void beforeAll() {
         super.beforeAll();
+    }
+
+    // Cucumber maps a failed assumption to a skipped scenario. The tag filter in the test runner is
+    // shared between the core and cluster runs, so cluster-only exclusions are applied here.
+    @Before(order = 0)
+    public void skip_if_ignored_in_cluster_mode(Scenario scenario) {
+        Assume.assumeFalse(scenario.getSourceTagNames().contains("@ignore-typedb-driver-cluster"));
     }
 
     @Before
@@ -73,6 +82,8 @@ public class ConnectionStepsCluster extends ConnectionStepsBase {
         return createTypeDBDriver(DEFAULT_CLUSTER_ADDRESSES, DEFAULT_CREDENTIALS, driverOptions);
     }
 
+    private static final Set<String> DEFAULT_ADDRESSES = DEFAULT_CLUSTER_ADDRESSES;
+
     @When("typedb starts")
     public void typedb_starts() {
     }
@@ -99,6 +110,28 @@ public class ConnectionStepsCluster extends ConnectionStepsBase {
                 DEFAULT_CLUSTER_ADDRESSES.iterator().next().replace("127.0.0.1", "surely-not-localhost"),
                 DEFAULT_CREDENTIALS,
                 driverOptions
+        ));
+    }
+
+    @When("connection opens with a connection string for the default address{may_error}")
+    public void connection_opens_with_a_connection_string_for_the_default_address(Parameters.MayError mayError) {
+        mayError.check(() -> driver = createTypeDBDriverFromConnectionString(connectionString(DEFAULT_ADDRESSES, null)));
+    }
+
+    @When("connection opens with connection string: {string}{may_error}")
+    public void connection_opens_with_connection_string(String connectionString, Parameters.MayError mayError) {
+        mayError.check(() -> driver = createTypeDBDriverFromConnectionString(connectionString));
+    }
+
+    @When("connection opens with a connection string for a wrong port{may_error}")
+    public void connection_opens_with_a_connection_string_for_a_wrong_port(Parameters.MayError mayError) {
+        mayError.check(() -> driver = createTypeDBDriverFromConnectionString(connectionString(DEFAULT_ADDRESSES, "0")));
+    }
+
+    @When("connection opens with a connection string for the other protocol default port{may_error}")
+    public void connection_opens_with_a_connection_string_for_the_other_protocol_default_port(Parameters.MayError mayError) {
+        mayError.check(() -> driver = createTypeDBDriverFromConnectionString(
+                connectionString(DEFAULT_ADDRESSES, OTHER_PROTOCOL_DEFAULT_PORT)
         ));
     }
 

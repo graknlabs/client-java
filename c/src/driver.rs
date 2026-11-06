@@ -130,7 +130,7 @@ pub extern "C" fn driver_new_with_address_translation(
 /// @param driver_lang The language of the driver connecting to the server.
 ///        Nullable: pass NULL to default to "c".
 #[unsafe(no_mangle)]
-pub extern "C" fn driver_new_from_connection_string(
+pub extern "C" fn driver_new_with_connection_string(
     connection_string: *const c_char,
     driver_options: *const DriverOptions,
     driver_lang: *const c_char,

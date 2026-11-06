@@ -18,7 +18,7 @@
  */
 
 import { After, Before } from "@cucumber/cucumber";
-import { AnalyzeResponse, GivenRows, isOkResponse, QueryOptions, QueryResponse, TransactionOptions, TransactionType, TypeDBHttpDriver } from "../../../dist/index.cjs";
+import { AnalyzeResponse, driverError, GivenRows, isOkResponse, QueryOptions, QueryResponse, TransactionOptions, TransactionType, TypeDBHttpDriver } from "../../../dist/index.cjs";
 import { assertNotError } from "./params";
 import * as https from "https";
 import * as http from "http";
@@ -193,6 +193,28 @@ export async function openAndTestConnectionWithAddresses(username: string, passw
     const newDriver = new TypeDBHttpDriver({
         username, password, addresses
     });
+    const healthCheck = await newDriver.health();
+    if (isOkResponse(healthCheck)) driver = newDriver;
+    return healthCheck;
+}
+
+/** The gRPC endpoint's default port, which a connection string written for a gRPC driver names. */
+export const OTHER_PROTOCOL_DEFAULT_PORT = 1729;
+
+/** A connection string for this mode's default addresses with admin credentials, each port replaced by `port` if given. */
+export function defaultConnectionString(port?: number): string {
+    const addresses = isClusterMode ? CLUSTER_ADDRESSES : [`${DEFAULT_HOST}:${DEFAULT_PORT}`];
+    const withPort = addresses.map(address => port === undefined ? address : address.replace(/:\d+$/, `:${port}`));
+    return `typedb://${DEFAULT_USERNAME}:${DEFAULT_PASSWORD}@${withPort.join(",")}`;
+}
+
+export async function openAndTestConnectionWithConnectionString(connectionString: string) {
+    let newDriver: TypeDBHttpDriver;
+    try {
+        newDriver = await TypeDBHttpDriver.fromConnectionString(connectionString);
+    } catch (error) {
+        return driverError("HDR1", (error as Error).message);
+    }
     const healthCheck = await newDriver.health();
     if (isOkResponse(healthCheck)) driver = newDriver;
     return healthCheck;

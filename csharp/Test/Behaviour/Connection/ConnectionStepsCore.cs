@@ -19,6 +19,7 @@
 
 using DataTable = Gherkin.Ast.DataTable;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Xunit;
 using Xunit.Gherkin.Quick;
@@ -64,6 +65,8 @@ namespace TypeDB.Driver.Test.Behaviour
                 new Credentials(DefaultUsername, DefaultPassword),
                 DriverOptions);
         }
+
+        protected override IEnumerable<string> DefaultAddresses => new[] { TypeDB.DefaultAddress };
 
         [Given(@"typedb starts")]
         [When(@"typedb starts")]

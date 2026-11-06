@@ -22,9 +22,10 @@ import { assertNotError, checkMayError, EXPECT_ERROR_CONTAINING, MayError } from
 import {
     closeConnection, DEFAULT_HOST,
     DEFAULT_PASSWORD, DEFAULT_PORT,
-    DEFAULT_USERNAME,
-    driver,
+    DEFAULT_USERNAME, defaultConnectionString,
+    driver, OTHER_PROTOCOL_DEFAULT_PORT,
     openAndTestConnection, openAndTestConnectionWithAddresses,
+    openAndTestConnectionWithConnectionString,
     openAndTestConnectionWithHostPort, openAndTestSingleConnection
 } from "./context";
 import assert from "assert";
@@ -52,6 +53,22 @@ When(`connection opens with a wrong host${EXPECT_ERROR_CONTAINING}`, async (_: s
 });
 When("connection opens with a wrong port; fails", async () => {
     await openAndTestConnectionWithHostPort(DEFAULT_USERNAME, DEFAULT_PASSWORD, DEFAULT_HOST, 0).then(checkMayError(true));
+});
+
+When("connection opens with a connection string for the default address{may_error}", async (mayError: MayError) => {
+    await openAndTestConnectionWithConnectionString(defaultConnectionString()).then(checkMayError(mayError));
+});
+When("connection opens with connection string: {string}{may_error}", async (connectionString: string, mayError: MayError) => {
+    await openAndTestConnectionWithConnectionString(connectionString).then(checkMayError(mayError));
+});
+When(`connection opens with connection string: {string}${EXPECT_ERROR_CONTAINING}`, async (connectionString: string, message: string) => {
+    await openAndTestConnectionWithConnectionString(connectionString).then(checkMayError(message));
+});
+When("connection opens with a connection string for a wrong port{may_error}", async (mayError: MayError) => {
+    await openAndTestConnectionWithConnectionString(defaultConnectionString(0)).then(checkMayError(mayError));
+});
+When("connection opens with a connection string for the other protocol default port{may_error}", async (mayError: MayError) => {
+    await openAndTestConnectionWithConnectionString(defaultConnectionString(OTHER_PROTOCOL_DEFAULT_PORT)).then(checkMayError(mayError));
 });
 
 Then("connection has {int} user(s)", async (expectedUserCount: number) => {

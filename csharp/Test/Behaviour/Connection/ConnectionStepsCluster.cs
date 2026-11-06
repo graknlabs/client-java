@@ -97,6 +97,8 @@ namespace TypeDB.Driver.Test.Behaviour
                 DriverOptions);
         }
 
+        protected override IEnumerable<string> DefaultAddresses => DEFAULT_CLUSTER_ADDRESSES;
+
         [Given(@"typedb starts")]
         [When(@"typedb starts")]
         public override void TypeDBStarts()

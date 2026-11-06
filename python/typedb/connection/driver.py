@@ -31,7 +31,7 @@ from typedb.database.database_manager import _DatabaseManager
 from typedb.connection.server import _Server
 from typedb.connection.transaction import _Transaction
 from typedb.native_driver_wrapper import driver_new, driver_new_with_addresses, \
-    driver_new_with_address_translation, driver_new_from_connection_string, init_logging, \
+    driver_new_with_address_translation, driver_new_with_connection_string, init_logging, \
     driver_is_open, driver_force_close, \
     driver_servers, driver_primary_server, driver_server_version, \
     server_iterator_next, TypeDBDriver as NativeDriver, \
@@ -83,7 +83,7 @@ class _Driver(Driver, NativeWrapper[NativeDriver]):
         init_logging()
 
         try:
-            native_driver = driver_new_from_connection_string(
+            native_driver = driver_new_with_connection_string(
                 connection_string,
                 driver_options.native_object if driver_options else None,
                 Driver.LANGUAGE)

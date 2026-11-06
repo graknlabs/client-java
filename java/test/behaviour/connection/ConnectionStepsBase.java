@@ -19,6 +19,7 @@
 
 package com.typedb.driver.test.behaviour.connection;
 
+import com.typedb.driver.TypeDB;
 import com.typedb.driver.api.Credentials;
 import com.typedb.driver.api.Driver;
 import com.typedb.driver.api.DriverOptions;
@@ -38,6 +39,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.StringJoiner;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -160,6 +162,28 @@ public abstract class ConnectionStepsBase {
     }
 
     abstract Driver createDefaultTypeDBDriver();
+
+    /** The HTTP endpoint's default port, which a connection string written for the HTTP driver names. */
+    static final String OTHER_PROTOCOL_DEFAULT_PORT = "8000";
+
+    /**
+     * A connection string for the given addresses with admin credentials, using the scheme that agrees
+     * with the current driver options' TLS setting. Each port is replaced by {@code port} if given.
+     */
+    String connectionString(Iterable<String> addresses, String port) {
+        String scheme = driverOptions.tlsConfig().isEnabled() ? "https" : "http";
+        StringJoiner joined = new StringJoiner(",");
+        for (String address : addresses) {
+            int separator = address.lastIndexOf(':');
+            String host = address.substring(0, separator);
+            joined.add(scheme + "://" + host + ":" + (port == null ? address.substring(separator + 1) : port));
+        }
+        return "typedb://" + ADMIN_USERNAME + ":" + ADMIN_PASSWORD + "@" + joined;
+    }
+
+    Driver createTypeDBDriverFromConnectionString(String connectionString) {
+        return TypeDB.driverFromConnectionString(connectionString, driverOptions);
+    }
 
     public static void initTransactionOptionsIfNeeded() {
         if (transactionOptions.isEmpty()) {

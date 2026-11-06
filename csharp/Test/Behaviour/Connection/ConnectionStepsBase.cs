@@ -95,6 +95,57 @@ namespace TypeDB.Driver.Test.Behaviour
 
         public abstract IDriver CreateTypeDBDriver(string address);
 
+        /// <summary>The HTTP endpoint's default port, which a connection string written for the HTTP driver names.</summary>
+        protected const string OtherProtocolDefaultPort = "8000";
+
+        /// <summary>
+        /// A connection string for the given addresses with admin credentials, using the scheme that agrees
+        /// with the current driver options' TLS setting. Each port is replaced by <paramref name="port"/> if given.
+        /// </summary>
+        protected string ConnectionString(IEnumerable<string> addresses, string? port = null)
+        {
+            string scheme = DriverOptions.TlsConfig.IsEnabled ? "https" : "http";
+            var withScheme = addresses.Select(address =>
+            {
+                int separator = address.LastIndexOf(':');
+                string host = address.Substring(0, separator);
+                return $"{scheme}://{host}:{port ?? address.Substring(separator + 1)}";
+            });
+            return $"typedb://{AdminUsername}:{AdminPassword}@{string.Join(",", withScheme)}";
+        }
+
+        protected IDriver CreateTypeDBDriverFromConnectionString(string connectionString)
+        {
+            return TypeDB.DriverFromConnectionString(connectionString, DriverOptions);
+        }
+
+        protected abstract IEnumerable<string> DefaultAddresses { get; }
+
+        [When(@"connection opens with a connection string for the default address")]
+        public void ConnectionOpensWithAConnectionStringForTheDefaultAddress()
+        {
+            Driver = CreateTypeDBDriverFromConnectionString(ConnectionString(DefaultAddresses));
+        }
+
+        [When(@"connection opens with connection string: ""(.*)""; fails with a message containing: ""(.*)""")]
+        public void ConnectionOpensWithConnectionStringFailsWithMessage(string connectionString, string expectedMessage)
+        {
+            var exception = Assert.ThrowsAny<Exception>(() => CreateTypeDBDriverFromConnectionString(connectionString));
+            Assert.Contains(expectedMessage, exception.Message);
+        }
+
+        [When(@"connection opens with a connection string for a wrong port; fails")]
+        public void ConnectionOpensWithAConnectionStringForAWrongPortFails()
+        {
+            Assert.ThrowsAny<Exception>(() => CreateTypeDBDriverFromConnectionString(ConnectionString(DefaultAddresses, "0")));
+        }
+
+        [When(@"connection opens with a connection string for the other protocol default port")]
+        public void ConnectionOpensWithAConnectionStringForTheOtherProtocolDefaultPort()
+        {
+            Driver = CreateTypeDBDriverFromConnectionString(ConnectionString(DefaultAddresses, OtherProtocolDefaultPort));
+        }
+
         public abstract void TypeDBStarts();
 
         public abstract void ConnectionOpensWithDefaultAuthentication();

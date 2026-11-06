@@ -29,6 +29,8 @@ import io.cucumber.java.Before;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 
+import java.util.List;
+
 public class ConnectionStepsCore extends ConnectionStepsBase {
     @Override
     public void beforeAll() {
@@ -53,6 +55,8 @@ public class ConnectionStepsCore extends ConnectionStepsBase {
     Driver createDefaultTypeDBDriver() {
         return createTypeDBDriver(TypeDB.DEFAULT_ADDRESS, DEFAULT_CREDENTIALS, driverOptions);
     }
+
+    private static final List<String> DEFAULT_ADDRESSES = List.of(TypeDB.DEFAULT_ADDRESS);
 
     @When("typedb starts")
     public void typedb_starts() {
@@ -84,6 +88,29 @@ public class ConnectionStepsCore extends ConnectionStepsBase {
                 TypeDB.DEFAULT_ADDRESS.replace("127.0.0.1", "surely-not-localhost"),
                 DEFAULT_CREDENTIALS,
                 driverOptions
+        ));
+    }
+
+
+    @When("connection opens with a connection string for the default address{may_error}")
+    public void connection_opens_with_a_connection_string_for_the_default_address(Parameters.MayError mayError) {
+        mayError.check(() -> driver = createTypeDBDriverFromConnectionString(connectionString(DEFAULT_ADDRESSES, null)));
+    }
+
+    @When("connection opens with connection string: {string}{may_error}")
+    public void connection_opens_with_connection_string(String connectionString, Parameters.MayError mayError) {
+        mayError.check(() -> driver = createTypeDBDriverFromConnectionString(connectionString));
+    }
+
+    @When("connection opens with a connection string for a wrong port{may_error}")
+    public void connection_opens_with_a_connection_string_for_a_wrong_port(Parameters.MayError mayError) {
+        mayError.check(() -> driver = createTypeDBDriverFromConnectionString(connectionString(DEFAULT_ADDRESSES, "0")));
+    }
+
+    @When("connection opens with a connection string for the other protocol default port{may_error}")
+    public void connection_opens_with_a_connection_string_for_the_other_protocol_default_port(Parameters.MayError mayError) {
+        mayError.check(() -> driver = createTypeDBDriverFromConnectionString(
+                connectionString(DEFAULT_ADDRESSES, OTHER_PROTOCOL_DEFAULT_PORT)
         ));
     }
 

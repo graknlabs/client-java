@@ -41,21 +41,6 @@ typedb_java_test(
 )
 
 typedb_java_test(
-    name = "test-connection-string",
-    srcs = ["ConnectionStringTest.java"],
-    test_class = "com.typedb.driver.test.integration.ConnectionStringTest",
-    deps = [
-        # Internal dependencies
-        "//java:driver-java",
-        "//java/api",
-        "//java/common",
-
-        # External dependencies from @typedb
-        "@typedb_maven//:org_slf4j_slf4j_api",
-    ],
-)
-
-typedb_java_test(
     name = "test-driver",
     srcs = ["DriverTest.java"],
     test_class = "com.typedb.driver.test.integration.DriverTest",

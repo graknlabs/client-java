@@ -183,16 +183,19 @@ impl Context {
                     context.unwrap().after_scenario().await.unwrap();
                 })
             })
-            .filter_run(glob, |_, _, sc| {
+            .filter_run(glob, move |_, _, sc| {
                 sc.name.contains(std::env::var("SCENARIO_FILTER").as_deref().unwrap_or(""))
-                    && !sc.tags.iter().any(Self::is_ignore_tag)
+                    && !sc.tags.iter().any(|tag| Self::is_ignore_tag(tag, is_cluster))
             })
             .await
             .execution_has_failed()
     }
 
-    fn is_ignore_tag(t: &String) -> bool {
-        t == "ignore" || t == "ignore-typedb-driver" || t == "ignore-typedb-driver-rust"
+    fn is_ignore_tag(t: &String, is_cluster: bool) -> bool {
+        t == "ignore"
+            || t == "ignore-typedb-driver"
+            || t == "ignore-typedb-driver-rust"
+            || (is_cluster && t == "ignore-typedb-driver-cluster")
     }
 
     pub async fn after_scenario(&mut self) -> TypeDBResult {
@@ -513,6 +516,38 @@ impl Context {
             _ => self.driver_options().unwrap_or_default().tls_config(DriverTlsConfig::disabled()),
         };
         TypeDBDriver::new(addresses, credentials, driver_options).await
+    }
+
+    /// The driver options a driver opened in this mode connects with: TLS off for core, and the
+    /// cluster's root CA when one is provided.
+    fn driver_options_for_mode(&self) -> TypeDBResult<DriverOptions> {
+        let tls_config = match &self.tls_root_ca {
+            Some(root_ca) if self.is_cluster && root_ca.exists() => DriverTlsConfig::enabled_with_root_ca(root_ca)?,
+            _ => DriverTlsConfig::disabled(),
+        };
+        Ok(self.driver_options().unwrap_or_default().tls_config(tls_config))
+    }
+
+    /// A connection string for this mode's default addresses, with each port replaced by `port` if given.
+    pub fn default_connection_string(&self, port: Option<&str>) -> TypeDBResult<String> {
+        let scheme = if self.driver_options_for_mode()?.tls_config.is_enabled() { "https" } else { "http" };
+        let addresses: Vec<&str> = match self.is_cluster {
+            false => vec![Self::DEFAULT_ADDRESS],
+            true => Self::DEFAULT_CLUSTER_ADDRESSES.to_vec(),
+        };
+        let addresses: Vec<String> = addresses
+            .into_iter()
+            .map(|address| {
+                let (host, default_port) = address.rsplit_once(':').expect("Expected host:port");
+                format!("{scheme}://{host}:{}", port.unwrap_or(default_port))
+            })
+            .collect();
+        Ok(format!("typedb://{}:{}@{}", Self::ADMIN_USERNAME, Self::ADMIN_PASSWORD, addresses.join(",")))
+    }
+
+    pub async fn create_driver_from_connection_string(&self, connection_string: &str) -> TypeDBResult<TypeDBDriver> {
+        let driver_options = self.driver_options_for_mode()?;
+        TypeDBDriver::new_from_connection_string(connection_string, Some(driver_options)).await
     }
 
     pub fn set_driver(&mut self, driver: TypeDBDriver) {
