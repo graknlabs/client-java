@@ -27,7 +27,7 @@ from typedb.common.exception import TypeDBDriverException, ILLEGAL_STATE, INVALI
 from typedb.api.analyze.constraint import (
     Constraint, Span,
     Isa, Has, Links, Sub, Owns, Relates, Plays,
-    FunctionCall, Expression, Is, Iid, DeleteConcepts, Comparison, Kind, Label, Value,
+    FunctionCall, Expression, Is, Iid, DeleteConcepts, Comparison, Kind, Label, Value, IsSet,
     Or, Not, Try,
 )
 from typedb.analyze.constraint_vertex import _ConstraintVertex
@@ -89,6 +89,7 @@ from typedb.native_driver_wrapper import (
     constraint_label_get_label,
     constraint_value_get_attribute_type,
     constraint_value_get_value_type,
+    constraint_isset_get_variables,
     constraint_or_get_branches,
     constraint_not_get_conjunction,
     constraint_try_get_conjunction,
@@ -142,6 +143,8 @@ class _Constraint(Constraint, NativeWrapper[NativeConstraint], ABC):
             return _Label(native)
         if variant == ConstraintVariant.Value:
             return _Value(native)
+        if variant == ConstraintVariant.IsSet:
+            return _IsSet(native)
         if variant == ConstraintVariant.Or:
             return _Or(native)
         if variant == ConstraintVariant.Not:
@@ -204,6 +207,9 @@ class _Constraint(Constraint, NativeWrapper[NativeConstraint], ABC):
     def is_value(self) -> bool:
         return False
 
+    def is_isset(self) -> bool:
+        return False
+
     def is_or(self) -> bool:
         return False
 
@@ -260,6 +266,9 @@ class _Constraint(Constraint, NativeWrapper[NativeConstraint], ABC):
 
     def as_value(self):
         raise TypeDBDriverException(INVALID_CONSTRAINT_CASTING, (self.__class__.__name__, "Value"))
+
+    def as_isset(self):
+        raise TypeDBDriverException(INVALID_CONSTRAINT_CASTING, (self.__class__.__name__, "IsSet"))
 
     def as_or(self):
         raise TypeDBDriverException(INVALID_CONSTRAINT_CASTING, (self.__class__.__name__, "Or"))
@@ -618,6 +627,21 @@ class _Value(_Constraint, Value):
 
     def value_type(self) -> str:
         return constraint_value_get_value_type(self.native_object)
+
+
+class _IsSet(_Constraint, IsSet):
+    def __init__(self, native):
+        super().__init__(native)
+
+    def is_isset(self) -> bool:
+        return True
+
+    def as_isset(self):
+        return self
+
+    def variables(self) -> Iterator["ConstraintVertex"]:
+        native_iter = constraint_isset_get_variables(self.native_object)
+        return map(lambda n: _ConstraintVertex(n), IteratorWrapper(native_iter, constraint_vertex_iterator_next))
 
 
 class _Or(_Constraint, Or):

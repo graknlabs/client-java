@@ -102,6 +102,10 @@ class Constraint(ABC):
         pass
 
     @abstractmethod
+    def is_isset(self) -> bool:
+        pass
+
+    @abstractmethod
     def is_or(self) -> bool:
         pass
 
@@ -175,6 +179,10 @@ class Constraint(ABC):
 
     @abstractmethod
     def as_value(self) -> "Value":
+        pass
+
+    @abstractmethod
+    def as_isset(self) -> "IsSet":
         pass
 
     @abstractmethod
@@ -419,6 +427,14 @@ class Value(Constraint, ABC):
 
     @abstractmethod
     def value_type(self) -> str:
+        pass
+
+
+class IsSet(Constraint, ABC):
+    """Represents an isset constraint: isset <variables>"""
+
+    @abstractmethod
+    def variables(self) -> Iterator["ConstraintVertex"]:
         pass
 
 

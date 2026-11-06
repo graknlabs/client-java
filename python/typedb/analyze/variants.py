@@ -38,6 +38,7 @@ from typedb.native_driver_wrapper import (
     KindOf as NativeKindOf,
     Label as NativeLabel,
     Value as NativeValue,
+    IsSet as NativeIsSet,
     Or as NativeOr,
     Not as NativeNot,
     Try as NativeTry,
@@ -87,6 +88,7 @@ class ConstraintVariant(IntEnum):
     KindOf = NativeKindOf
     Label = NativeLabel
     Value = NativeValue
+    IsSet = NativeIsSet
     Or = NativeOr
     Not = NativeNot
     Try = NativeTry
