@@ -73,7 +73,7 @@ bazel_dep(name = "typedb_behaviour", version = "0.0.0")
 git_override(
     module_name = "typedb_behaviour",
     remote = "https://github.com/typedb/typedb-behaviour",
-    commit = "016e9d9465aa8aeaffdf9543987ca9a8b5444695",
+    commit = "2c858c2333bd9c364742e3a83997e3a669402c5b",
 )
 
 # Rust rules need typedb_dependencies for patching
@@ -258,13 +258,13 @@ native_artifact_files.artifact(
     name = "typedb_artifact",
     group_name = "typedb-all-{platform}",
     artifact_name = "typedb-all-{platform}-{version}.{ext}",
-    commit = "bcf527e4a83a70cae0922e3c24b5cea67b7dc5e3",
+    commit = "145de9c4bcb83cb390a00d35606f5a594cf27ced",
 )
 native_artifact_files.artifact(
     name = "typedb_cluster_artifact",
     group_name = "typedb-cluster-all-{platform}",
     artifact_name = "typedb-cluster-all-{platform}-{version}.{ext}",
-    commit = "0745c82fad9d07dad4ffd3d72c31dab94f67271b",
+    commit = "cfb20c9ce6933abdbed0ebff144733fe4f543006",
     private = True,
 )
 

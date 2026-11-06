@@ -24,6 +24,7 @@ ConstraintAny:
  | ConstraintDeleteConcepts
  | ConstraintKind
  | ConstraintValue
+ | ConstraintIsSet
  | ConstraintLabel
  | ConstraintOr
  | ConstraintNot

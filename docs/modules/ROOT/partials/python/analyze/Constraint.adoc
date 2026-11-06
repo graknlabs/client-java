@@ -121,6 +121,20 @@ as_isa() -> Isa
 .Returns
 `Isa`
 
+[#_Constraint_as_isset_]
+==== method ``as_isset``
+
+[source,python]
+----
+as_isset() -> IsSet
+----
+
+
+
+[caption=""]
+.Returns
+`IsSet`
+
 [#_Constraint_as_kind_]
 ==== method ``as_kind``
 
@@ -379,6 +393,20 @@ is_is() -> bool
 [source,python]
 ----
 is_isa() -> bool
+----
+
+
+
+[caption=""]
+.Returns
+`bool`
+
+[#_Constraint_is_isset_]
+==== method ``is_isset``
+
+[source,python]
+----
+is_isset() -> bool
 ----
 
 

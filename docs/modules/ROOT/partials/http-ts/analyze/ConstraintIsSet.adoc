@@ -1,0 +1,19 @@
+[#_ConstraintIsSet]
+[.doc-api-reference-driver]
+==== ConstraintIsSet
+
+`class`
+
+[caption=""]
+.Fields
+// tag::properties[]
+[cols=",,"]
+[options="header"]
+|===
+|Name |Type |Description
+a| `tag` a| `"isSet"` a| 
+a| `textSpan` a| `ConstraintSpan` a| 
+a| `variables` a| `ConstraintVertexVariable` a| 
+|===
+// end::properties[]
+

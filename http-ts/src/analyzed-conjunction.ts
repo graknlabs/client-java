@@ -76,6 +76,7 @@ export type ConstraintAny =
     | ConstraintDeleteConcepts
     | ConstraintKind
     | ConstraintValue
+    | ConstraintIsSet
     | ConstraintLabel
     |
     ConstraintOr
@@ -224,6 +225,13 @@ export interface ConstraintValue {
 
     attributeType: ConstraintVertexVariable,
     valueType: string,
+}
+
+export interface ConstraintIsSet {
+    tag: "isSet",
+    textSpan: ConstraintSpan,
+
+    variables: ConstraintVertexVariable[],
 }
 
 export interface ConstraintKind {

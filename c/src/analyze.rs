@@ -119,6 +119,7 @@ enum ConstraintVariant {
     KindOf,
     Label,
     Value,
+    IsSet,
 
     Or,
     Not,
@@ -652,6 +653,7 @@ pub extern "C" fn constraint_variant(constraint: *const ConstraintWithSpan) -> C
         Constraint::Kind { .. } => ConstraintVariant::KindOf,
         Constraint::Label { .. } => ConstraintVariant::Label,
         Constraint::Value { .. } => ConstraintVariant::Value,
+        Constraint::IsSet { .. } => ConstraintVariant::IsSet,
         Constraint::Or { .. } => ConstraintVariant::Or,
         Constraint::Not { .. } => ConstraintVariant::Not,
         Constraint::Try { .. } => ConstraintVariant::Try,
@@ -1134,6 +1136,19 @@ pub extern "C" fn constraint_value_get_value_type(constraint: *const ConstraintW
         unreachable!("Expected constraint to be Value");
     };
     release_string(value_type.name().to_owned())
+}
+
+/// Unwraps the <code>Constraint</code> instance as a `IsSet`
+/// and returns the specified variables.
+/// Will panic if the Constraint is not a IsSet constraint.
+#[unsafe(no_mangle)]
+pub extern "C" fn constraint_isset_get_variables(
+    constraint: *const ConstraintWithSpan,
+) -> *mut ConstraintVertexIterator {
+    let Constraint::IsSet { variables } = &borrow(constraint).constraint else {
+        unreachable!("Expected constraint to be IsSet");
+    };
+    release(ConstraintVertexIterator(CIterator(box_stream(variables.clone().into_iter()))))
 }
 
 /// Unwraps the <code>Constraint</code> instance as an `Or` constraint,

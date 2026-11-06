@@ -20,6 +20,7 @@ a| `FunctionCall`
 a| `Has`
 a| `Iid`
 a| `Is`
+a| `IsSet`
 a| `Isa`
 a| `Kind`
 a| `Label`

@@ -365,6 +365,9 @@ pub mod functor_encoding {
                     let value_type_ref = &value_type_sr;
                     encode_functor_impl!(context, Value { attribute_type, value_type_ref, })
                 }
+                Self::IsSet { variables } => {
+                    encode_functor_impl!(context, IsSet { variables, })
+                }
                 Self::Or { branches } => {
                     encode_functor_impl!(context, Or { branches, })
                 }

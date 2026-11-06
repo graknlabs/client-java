@@ -72,6 +72,8 @@ namespace TypeDB.Driver.Analyze
                     return new LabelImpl(constraint);
                 case Pinvoke.ConstraintVariant.Value:
                     return new ValueImpl(constraint);
+                case Pinvoke.ConstraintVariant.IsSet:
+                    return new IsSetImpl(constraint);
                 case Pinvoke.ConstraintVariant.Or:
                     return new OrImpl(constraint);
                 case Pinvoke.ConstraintVariant.Not:
@@ -114,6 +116,7 @@ namespace TypeDB.Driver.Analyze
         public virtual bool IsKind => false;
         public virtual bool IsLabel => false;
         public virtual bool IsValue => false;
+        public virtual bool IsIsSet => false;
         public virtual bool IsOr => false;
         public virtual bool IsNot => false;
         public virtual bool IsTry => false;
@@ -134,6 +137,7 @@ namespace TypeDB.Driver.Analyze
         public virtual IKind AsKind() => throw InvalidCast("Kind");
         public virtual ILabelConstraint AsLabel() => throw InvalidCast("Label");
         public virtual IValueConstraint AsValue() => throw InvalidCast("Value");
+        public virtual IIsSet AsIsSet() => throw InvalidCast("IsSet");
         public virtual IOr AsOr() => throw InvalidCast("Or");
         public virtual INot AsNot() => throw InvalidCast("Not");
         public virtual ITry AsTry() => throw InvalidCast("Try");
@@ -365,6 +369,19 @@ namespace TypeDB.Driver.Analyze
 
             public IConstraintVertex AttributeType => new ConstraintVertex(Pinvoke.typedb_driver.constraint_value_get_attribute_type(NativeObject));
             public string ValueType => Pinvoke.typedb_driver.constraint_value_get_value_type(NativeObject);
+        }
+
+        public class IsSetImpl : Constraint, IIsSet
+        {
+            internal IsSetImpl(Pinvoke.ConstraintWithSpan nativeObject) : base(nativeObject) { }
+
+            public override bool IsIsSet => true;
+            public override IIsSet AsIsSet() => this;
+
+            public IEnumerable<IConstraintVertex> Variables =>
+                new NativeEnumerable<Pinvoke.ConstraintVertex>(
+                    Pinvoke.typedb_driver.constraint_isset_get_variables(NativeObject))
+                    .Select(v => new ConstraintVertex(v));
         }
 
         public class OrImpl : Constraint, IOr

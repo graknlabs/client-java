@@ -44,6 +44,7 @@ dir_mapping = {
     "InsertStage.adoc": "analyze",
     "Is.adoc": "analyze",
     "Isa.adoc": "analyze",
+    "IsSet.adoc": "analyze",
     "constraint.Kind.adoc": "analyze",
     "enums.Kind.adoc": "concept",
     "KindVariant.adoc": "analyze",

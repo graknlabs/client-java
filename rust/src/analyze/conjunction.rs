@@ -66,9 +66,17 @@ pub struct ConstraintWithSpan {
 #[derive(Debug, Clone)]
 pub enum Constraint {
     /// &lt;instance&gt; isa(!) &lt;type&gt;
-    Isa { instance: ConstraintVertex, r#type: ConstraintVertex, exactness: ConstraintExactness },
+    Isa {
+        instance: ConstraintVertex,
+        r#type: ConstraintVertex,
+        exactness: ConstraintExactness,
+    },
     /// &lt;owner&gt; has &lt;attribute&gt;
-    Has { owner: ConstraintVertex, attribute: ConstraintVertex, exactness: ConstraintExactness },
+    Has {
+        owner: ConstraintVertex,
+        attribute: ConstraintVertex,
+        exactness: ConstraintExactness,
+    },
     /// &lt;relation&gt; links (&lt;role&gt;: &lt;player&gt;)
     Links {
         relation: ConstraintVertex,
@@ -77,41 +85,90 @@ pub enum Constraint {
         exactness: ConstraintExactness,
     },
     /// &lt;subtype&gt; sub(!) &lt;supertype&gt;
-    Sub { subtype: ConstraintVertex, supertype: ConstraintVertex, exactness: ConstraintExactness },
+    Sub {
+        subtype: ConstraintVertex,
+        supertype: ConstraintVertex,
+        exactness: ConstraintExactness,
+    },
     /// &lt;owner&gt; owns &lt;attribute&gt;
-    Owns { owner: ConstraintVertex, attribute: ConstraintVertex, exactness: ConstraintExactness },
+    Owns {
+        owner: ConstraintVertex,
+        attribute: ConstraintVertex,
+        exactness: ConstraintExactness,
+    },
     /// &lt;relation&gt; relates &lt;role&gt;
-    Relates { relation: ConstraintVertex, role: ConstraintVertex, exactness: ConstraintExactness },
+    Relates {
+        relation: ConstraintVertex,
+        role: ConstraintVertex,
+        exactness: ConstraintExactness,
+    },
     /// &lt;player&gt; plays &lt;role&gt;
-    Plays { player: ConstraintVertex, role: ConstraintVertex, exactness: ConstraintExactness },
+    Plays {
+        player: ConstraintVertex,
+        role: ConstraintVertex,
+        exactness: ConstraintExactness,
+    },
     /// let &lt;assigned&gt; = name(&lt;arguments&gt;)
     /// e.g. let $x, $y = my_function($a, $b);
-    FunctionCall { name: String, assigned: Vec<ConstraintVertex>, arguments: Vec<ConstraintVertex> },
+    FunctionCall {
+        name: String,
+        assigned: Vec<ConstraintVertex>,
+        arguments: Vec<ConstraintVertex>,
+    },
     /// let &lt;assigned&gt; = &lt;expression&gt;
     /// e.g. let $x = $y + 5;
     /// Here, arguments will be `&lsqb;$y&rsqb;`
-    Expression { text: String, assigned: ConstraintVertex, arguments: Vec<ConstraintVertex> },
+    Expression {
+        text: String,
+        assigned: ConstraintVertex,
+        arguments: Vec<ConstraintVertex>,
+    },
     /// &lt;lhs&gt; is &lt;rhs&gt;
     /// $x is $y
-    Is { lhs: ConstraintVertex, rhs: ConstraintVertex },
+    Is {
+        lhs: ConstraintVertex,
+        rhs: ConstraintVertex,
+    },
     /// &lt;concept&gt; iid &lt;iid&gt;
     /// e.g. `$y iid 0x1f0005000000000000012f`
-    Iid { concept: ConstraintVertex, iid: IID },
+    Iid {
+        concept: ConstraintVertex,
+        iid: IID,
+    },
     /// delete &lt;variables&gt;
     /// e.g. `delete $q;` deletes the concepts bound to `$q`
-    DeleteConcepts { variables: Vec<ConstraintVertex> },
+    DeleteConcepts {
+        variables: Vec<ConstraintVertex>,
+    },
     /// &lt;lhs&gt; &lt;comparator&gt; &lt;rhs&gt;
     /// e.g. `$x &lt; 5`
-    Comparison { lhs: ConstraintVertex, rhs: ConstraintVertex, comparator: Comparator },
+    Comparison {
+        lhs: ConstraintVertex,
+        rhs: ConstraintVertex,
+        comparator: Comparator,
+    },
     /// &lt;kind&gt; &lt;type&gt;
     /// e.g. `entity person`
-    Kind { kind: concept::Kind, r#type: ConstraintVertex },
+    Kind {
+        kind: concept::Kind,
+        r#type: ConstraintVertex,
+    },
     /// &lt;type&gt; label &lt;label&gt;
     /// e.g. `$t label person`
-    Label { r#type: ConstraintVertex, label: String },
+    Label {
+        r#type: ConstraintVertex,
+        label: String,
+    },
     /// &lt;attribute_type&gt; value &lt;value_type&gt;
     /// e.g. $t value string
-    Value { attribute_type: ConstraintVertex, value_type: concept::ValueType },
+    Value {
+        attribute_type: ConstraintVertex,
+        value_type: concept::ValueType,
+    },
+    // isset $x, $y, ...;
+    IsSet {
+        variables: Vec<ConstraintVertex>,
+    },
     /// { &lt;branches&lsqb;0&rsqb;&gt; } or { &lt;branches&lsqb;1&rsqb;&gt; } &lsqb;or ...&rsqb;
     Or {
         /// Index into <code>Pipeline.conjunctions</code>

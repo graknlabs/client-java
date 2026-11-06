@@ -360,6 +360,7 @@
 %noexception constraint_label_get_label;
 %noexception constraint_value_get_attribute_type;
 %noexception constraint_value_get_value_type;
+%noexception constraint_isset_get_variables;
 %noexception constraint_or_get_branches;
 %noexception constraint_not_get_conjunction;
 %noexception constraint_try_get_conjunction;

@@ -28,6 +28,7 @@ dir_mapping = {
     "Constraint.Iid.adoc": "analyze",
     "Constraint.Is.adoc": "analyze",
     "Constraint.Isa.adoc": "analyze",
+    "Constraint.IsSet.adoc": "analyze",
     "Constraint.Kind.adoc": "analyze",
     "Constraint.Label.adoc": "analyze",
     "Constraint.Links.adoc": "analyze",
